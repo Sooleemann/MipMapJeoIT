@@ -1,0 +1,327 @@
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+    color: var(--bs-secondary-color);
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+/*Navbar*/
+
+.navbar .action-form {
+    width: 280px;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.navbar {
+    background-color: rgba(0,0,0,0.7) !important;
+    border-radius: .25rem !important;
+    margin: .5rem !important;
+}
+
+@media screen and (max-width:992px) {
+    .navbar {
+        background-color: rgba(0,0,0,1) !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    .nav-item {
+        display: grid;
+    }
+
+        .nav-item button {
+            margin: 4px 0 0 4px;
+            display: block;
+            text-align: left;
+        }
+}
+
+.offcanvas-transparent {
+    background-color: rgba(0,0,0,0.7) !important;
+    margin-top: 58px;
+}
+
+.esri-ui-inner-container {
+    margin-top: 70px;
+}
+
+                                    /*Navbar bitiþi*/
+
+
+
+                                                        /*Butonlar*/
+                                                               
+.btn-outline-tanap { 
+    --bs-btn-color: #17479e;
+    --bs-btn-border-color: #17479e;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #17479e;
+    --bs-btn-hover-border-color: #17479e;
+    --bs-btn-focus-shadow-rgb: 25,135,84;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #17479e;
+    --bs-btn-active-border-color: #17479e;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #17479e;
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: #17479e;
+    --bs-gradient: none;
+}
+
+.esri-widget {
+    background-color: rgba(0,0,0,0.7) !important;
+}
+
+    .esri-widget .esri-widget--button {
+        background-color: rgba(0,0,0,0.0) !important;
+    }
+
+
+#overlay {
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    transition: 0.3s linear;
+}
+
+    #overlay.active {
+        width: 100%;
+        height: 100vh;
+    }
+
+
+                            /*Drawer*/
+.offcanvas {
+    margin-top: 65px;
+}
+
+.myaccordion {
+    margin: 0 auto;
+    -webkit-box-shadow: 0px 10px 38px -19px rgba(0, 0, 0, 0.66);
+    -moz-box-shadow: 0px 10px 38px -19px rgba(0, 0, 0, 0.66);
+    box-shadow: 0px 10px 38px -19px rgba(0, 0, 0, 0.66);
+    background: #fff;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+    .myaccordion .card,
+    .myaccordion .card:last-child .card-header {
+        border: none;
+        background: transparent;
+
+    }
+
+    .myaccordion .card-header {
+        border: none;
+        background: transparent;
+
+    }
+
+        .myaccordion .card-header .heading {
+            position: relative;
+            font-weight: 300;
+            z-index: 0;
+        }
+
+            .myaccordion .card-header .heading h3 {
+                font-size: 16px;
+                margin-bottom: 0;
+                color: #fff;
+                text-align: left;
+            }
+
+            .myaccordion .card-header .heading .icon {
+                width: 40px;
+                height: 40px;
+                z-index: 0;
+                border-radius: 50%;
+                border: 1px solid rgba(255, 255, 255, 0.5);
+            }
+
+                .myaccordion .card-header .heading .icon span {
+                    font-size: 20px;
+                    color: #fff;
+                }
+
+        .myaccordion .card-header .num {
+            border-radius: 40px;
+            font-size: 16px;
+            padding: 4px 15px;
+            position: relative;
+            z-index: 0;
+            overflow: hidden;
+            background: #df7563;
+            color: #fff;
+
+        }
+
+    .myaccordion .fa {
+        font-size: 16px;
+        color: rgba(0, 0, 0, 0.3);
+    }
+
+    .myaccordion .btn {
+        width: 100%;
+        font-weight: normal;
+        color: #000;
+        padding: 0;
+        letter-spacing: 0;
+        font-size: 18px;
+        border-radius: 0 !important;
+        border: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        background: #17479e;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .myaccordion .btn-link:hover,
+    .myaccordion .btn-link:focus {
+        text-decoration: none;
+    }
+
+[data-toggle="collapse"] .fa:before {
+    content: "\f3d8";
+    font-family: "Ionicons";
+    font-style: normal;
+}
+
+[data-toggle="collapse"].collapsed .fa:before {
+    content: "\f3d0";
+    font-family: "Ionicons";
+    font-style: normal;
+}
+
+button[aria-expanded="true"] {
+    color: #000 !important;
+    -webkit-transition: 0.3s;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    -webkit-box-shadow: 0px 7px 24px -19px rgba(0, 0, 0, 0.32);
+    -moz-box-shadow: 0px 7px 24px -19px rgba(0, 0, 0, 0.32);
+    box-shadow: 0px 7px 24px -19px rgba(0, 0, 0, 0.32);
+    border-color: #17479e !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button[aria-expanded="true"] {
+        -webkit-transition: none;
+        -o-transition: none;
+        transition: none;
+    }
+}
+
+button[aria-expanded="true"] .fa, button[aria-expanded="true"] .num {
+    color: #fff !important;
+}
+
+button[aria-expanded="true"] .icon span {
+    color: #fff !important;
+}
+
+button[aria-expanded="true"] .num {
+    background: #453f3e !important;
+}
+
+button[aria-expanded="false"] {
+    background-color: #fff;
+}
+
+.myaccordion .card-body:after {
+    position: absolute;
+    top: 0;
+    left: 30px;
+    width: 0;
+    height: 0;
+    content: '';
+    border-style: solid;
+    border-width: 15px 15px 0 15px;
+    border-color: #fff transparent transparent transparent;
+
+}
+
+
+/**                           ------------------------------      HAVA DURUMU BOX-----------------------------------------*/
+.box {
+    position: relative;
+    width: 300px;
+    height: 180px;
+    margin-bottom: 30px;
+    /*    backdrop-filter: blur(14px) saturate(200%);
+    -webkit-backdrop-filter: blur(14px) saturate(200%);*/
+    background-color: rgba(0,0,0,0.7) !important;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.125);
+}
+
+.weather-box {
+    position: absolute;
+    right: 9px;
+    bottom: 30px;
+    box-shadow: 0 0 3px rgba(0,0,0,.5);
+    overflow: hidden;
+    color: #fff;
+}
+
+.weather-header {
+    padding: 7px;
+    text-align: center;
+    text-transform: capitalize;
+    font-size: 1.1em;
+    color: #fff;
+}
+
+.weather-body {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.weather-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px;
+}
+
+.weather-left {
+    /* Ýstediðiniz boyutlarý buradan belirleyebilirsiniz */
+    width: 70px;
+    height: 70px;
+}
+
+.weather-image {
+    /* Resmin boyutunu %100'e ayarlayarak ölçeklendirir */
+    width: 100%;
+    height: auto;
+}
+
+/*Hava box bitiþ*/

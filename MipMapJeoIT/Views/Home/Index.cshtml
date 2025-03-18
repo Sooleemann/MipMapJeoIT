@@ -1,0 +1,559 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Home Page";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>@ViewData["Title"]</title>
+
+    <link href="~/lib/fontawesome/css/all.min.css" rel="stylesheet" />
+    <link href="~/lib/fontawesome/css/solid.min.css" rel="stylesheet" />
+    @*     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" /> *@
+    <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css" />
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <link href="~/lib/limonte-sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <script src="~/lib/limonte-sweetalert2/sweetalert2.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link href="~/css/site.css" asp-append-version="true" rel="stylesheet" />
+
+    <link rel="shortcut icon" href="/favicon.ico">
+
+
+
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+        }
+
+        #toolbarDiv {
+            position: absolute;
+            top: 0px;
+            right: 40px;
+            cursor: default;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+        }
+
+        #hover {
+            display: none;
+            width: 250px;
+            background-color: white;
+            border: #ccc;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1000;
+        }
+
+        #previewContainer {
+            pointer-events: none;
+            width: 200px;
+            height: 125px;
+            margin: 0;
+            position: absolute;
+            bottom: 25px;
+            right: 10px;
+            border: 1px solid dimgrey;
+            display:none;
+            z-index:50;
+        }
+
+    </style>
+</head>
+<body>
+
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-black fixed-top">
+        <div class="container-fluid">
+            <button class="btn btn-outline-tanap me-3" data-bs-toggle="offcanvas" data-bs-target="#layerOffcanvas" type="button" aria-controls="navbarsExample01">
+                <span class="fas fa-layer-group text-light"></span>
+            </button>
+            <a class="navbar-brand p-0" href="https://www.mipmap-technologies.com/" target="_blank">
+
+                <img src="~/images/odtu.png" alt="Logo" class="img-fluid" style="max-height:50px;" />
+            </a>    
+@*             <a asp-action="Cesium" title="Dashboard">
+                <i class="fas fa-tachometer-alt"></i></a> *@
+            <button type="button" id="btnDashboard" data-widget="dashboard" data-button="toolbar" class="btn btn-outline-tanap" data-bs-toggle="tooltip" title="Dashboard">
+                <i class="fas fa-tachometer-alt text-light"></i>
+            </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="true" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav mx-auto">
+
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnHome" data-widget="home" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Anasayfa">
+                            <i class="fas fa-home text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Home</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnFullScreen" data-widget="fullscreen" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Tam Ekran">
+                            <i class="fas fa-expand-wide text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Full Screen</span>
+                        </button>
+                    </li>
+                    <li class="nav-item pe-lg-1">
+
+                        <button type="button" id="btnMeasureLine" data-widget="distance" data-button="toolbar" class="btn btn-outline-tanap" data-bs-toggle="tooltip" title="Uzunluk ölçümü">
+                            <i class="fas fa-ruler text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Mesafe Ölçüm</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnMeasurePoly" data-widget="area" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Alan Ölçümü">
+                            <i class="fas fa-draw-polygon text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Alan Ölçüm</span>
+                        </button>
+                    </li>
+                    <li class="nav-item pe-lg-1">
+                        <button type="button" id="btnMeasureProfile" data-widget="profile" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Yükseklik Profili">
+                            <i class="esri-icon-elevation-profile text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Yükseklik Profili</span>
+                        </button>
+                    </li>
+                    <li class="nav-item pe-lg-1">
+                        <button type="button" id="btnLineOfSight" data-widget="lineofsight" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Line of Sight">
+                            <svg aria-hidden="true" class="svg d-inline" fill="white" height="18" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 6h1v1H8zm0 3h1V8H8zm0 2h1v-1H8zm0 2h1v-1H8zm8 2v1H0v-1h6V8H5V7h1V4.572l5-3.57V15zm-6 0V2.944L7 5.087V15zm-6-4.605v-.842A3.373 3.373 0 0 1 .84 7.765a3.37 3.37 0 0 1 1.804-1.234 2.054 2.054 0 0 0-.323 1.073 1.467 1.467 0 0 0 1.6 1.46c.027 0 .053-.005.08-.006v-3.45c-.04 0-.08-.008-.12-.008A5.27 5.27 0 0 0 .066 7.4a.374.374 0 0 0-.032.365A3.893 3.893 0 0 0 4 10.395zM13 7h-1v1h1zm.354-2.288l-.707.707L14.227 7H14v1h.27l-1.623 1.623.707.707L16 7.684v-.325z"></path></svg>
+
+                            <span class="d-inline-block d-lg-none text-light">Line of Sight</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnDaylight" data-widget="daylight" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Gün I????">
+                            <i class="fas fa-sun text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Gün ?????</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnWeather" data-widget="weather" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Hava Durumu">
+                            <i class="fas fa-cloud-moon-rain text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Hava Durumu</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnSlice" data-widget="slice" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Kesme">
+                            <i class="fas fa-cut text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Kesit</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnViewshed" data-widget="viewshed" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Görü? Alan?">
+                            <i class="far fa-eye text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Görü? Alan?</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnParcel" data-widget="parsel" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="TKGM Parsel Sorgula">
+                            <i class="fas fa-question-circle text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Parsel Sorgu</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnBaseMaps" data-widget="basemaps" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Altl?klar">
+                            <i class="fab fa-windows text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Altl?k</span>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnFiltre" data-widget="filtre" data-button="toolbar" class="btn btn-outline-tanap" data-bs-target="#drawerFilter" data-bs-toggle="offcanvas" title="Filtre Uygula">
+                            <i class="far fa-filter text-light"></i>
+                            <span class="d-inline-block d-lg-none text-light">Filtre</span>
+                        </button>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                </div>
+            </div>
+        </div>
+    </nav>
+
+
+    <div id="previewContainer"></div>
+
+    <div id="divViewshed" class="esri-widget p-2" style="display:none;">
+        <div>
+            <button id="btnViewshedAdd" class="btn btn-dark">Görü? Alan? ekle</button>
+            <button id="btnViewshedCancel" class="btn btn-dark" style="display:none;">?ptal</button>
+        </div>
+        <p id="textViewshedPrompt" style="display:none;">Ekrana t?klayarak bir görü? ala? analizi olu?turun.</p>
+    </div>
+
+    <div class="offcanvas offcanvas-end text-bg-dark offcanvas-transparent" data-bs-backdrop="false" tabindex="-1" id="drawerFilter" aria-labelledby="layerOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="layerOffcanvasLabel">Filtre Uygula</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-query" data-bs-toggle="tab" data-bs-target="#tab-query-tab" type="button" role="tab" aria-controls="tab-query-tab" aria-selected="true">Query</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-thematic" data-bs-toggle="tab" data-bs-target="#tab-thematic-tab" type="button" role="tab" aria-controls="tab-thematic-tab" aria-selected="false">Thematic</button>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane show active" id="tab-query-tab" role="tabpanel" aria-labelledby="tab-query-tab" tabindex="0">
+                    <table class="table table-sm mt-2">
+                        <tr>
+                            <th>Field</th>
+                            <th>Operator</th>
+                        </tr>
+                        <tr>
+                            <td><div class="text-nowrap">function_</div></td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="1" id="functionSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Uwall</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="uwallSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Uwindow</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="uwindowSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Uroof</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="uroofSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Uground</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="ugroundSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>SHGC</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="shgcSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Infiltration</td>
+                            <td>
+                                <div>
+                                    <input type="text" class="js-range-slider" min="0" max="2" step="0.0001" id="infiltrationSlider" />
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="text-end">
+                        <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
+                        <button class="btn btn-dark btn-sm" id="btnFilter"><i class="fa fa-filter"></i> Filter</button>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab-thematic-tab" role="tabpanel" aria-labelledby="tab-thematic-tab" tabindex="0">
+                    <br />
+                    <p>Please select thematic map type:</p>
+                    <select class="form-select mb-2" id="ddlThematic">
+                        <option value="">-Not set-</option>
+                        <option value="Usage">Usage</option>
+                        <option value="Heritage">Heritage</option>
+                        <option value="Status">Status</option>
+                        <option value="Floor">Floor count</option>
+
+                    </select>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-lg-4">
+                                <div id="locationChart" style="height:300px;"></div>
+                            </div>
+                            <div class="col-md-12 col-lg-4">
+                                <div id="statusChart" style="height:300px;"></div>
+                            </div>
+                            <div class="col-md-12 col-lg-4">
+                                <div id="phaseChart" style="height:300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="pnlThematic" style="display:none;max-height:240px;overflow:auto" class="mb-2">
+
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Label</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblThematic">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-2 d-flex justify-content-between">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="chkTooltip" />
+                            <label for="chkTooltip" class="form-check-label">Show tooltips</label>
+                        </div>
+                        <button class="btn btn-dark btn-sm" type="button" id="btnThematic">Apply</button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start text-bg-dark offcanvas-transparent" data-bs-backdrop="false" tabindex="-1" id="layerOffcanvas" aria-labelledby="layerOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="layerOffcanvasLabel">Katman Yönetimi</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div id="accordion" class="myaccordion w-100">
+                <div class="card">
+                    <div class="card-header p-0" id="headingOne">
+                        <h2 class="mb-0">
+                            <button class="d-flex py-2 px-4 align-items-center justify-content-between btn btn-link" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                <div class="heading d-flex align-items-center">
+                                    <div class="icon d-flex align-items-center justify-content-center">
+                                        <span class="fas fa-layer-group"></span>
+                                    </div>
+                                    <h3 class="mb-0 ms-3"> Ortofoto </h3>
+                                </div>
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-bs-parent="#accordion" style="">
+                        <div class="card-body text-bg-dark">
+                            <div class="mb-3">
+                                <div class="form-check ">
+                                    <input type="checkbox" name="chkOrtho" checked class="form-check-input" id="chkOrtho" value="TKGM">
+                                    <label class="form-check-label" for="chkOrtho"> Ortofoto 10cm </label>
+                                </div>
+                            </div>
+                            <div class="mb-3  d-flex justify-content-between">
+                                <div class="form-check ">
+                                    <input type="checkbox" name="chkMesh" checked class="form-check-input" id="chkMesh" value="TKGM">
+                                    <label class="form-check-label" for="chkMesh"> 3D Mesh </label>
+                                </div>
+                                <span id="zoomToMesh" style="cursor:pointer"><i class="far fa-expand"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header p-0" id="headingTwo">
+                        @*  BUildings *@
+                        <h2 class="mb-0">
+                            <button class="d-flex py-2 px-4 align-items-center justify-content-between btn btn-link collapsed" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                <div class="heading d-flex align-items-center">
+                                    <div class="icon d-flex align-items-center justify-content-center">
+                                        <span class="fas fa-city"></span>
+                                    </div>
+                                    <h3 class="mb-0 ms-3">Binalar</h3>
+                                </div>
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordion" style="">
+                        <div class="card-body text-bg-dark">
+                            <div class="mb-3 d-flex justify-content-between">
+                                <div class="form-check ">
+                                    <input type="checkbox" name="buildings" class="form-check-input" id="chkBuildings" value="kaplamali">
+                                    <label class="form-check-label" for="chkBuildings">Binalar</label>
+                                </div>
+                                <span id="zoomToBuildings" style="cursor:pointer"><i class="far fa-expand"></i></span>
+
+                            </div>
+                            <div class="mb-3 d-flex justify-content-between">
+                                <div class="form-check ">
+                                    <input type="checkbox" checked name="buildings2" class="form-check-input" id="chkBuildings2" value="kaplamasiz">
+                                    <label class="form-check-label" for="chkBuildings2">Binalar Kaplamas?z</label>
+                                </div>
+                                <span id="zoomToBuildings2" style="cursor:pointer"><i class="far fa-expand"></i></span>
+
+                            </div>
+                            <div class="mb-3 d-flex justify-content-between">
+
+                                <div class="form-check ">
+                                    <input type="checkbox" name="buildings3" class="form-check-input" id="chkBuildings3" value="bina-gml">
+                                    <label class="form-check-label" for="chkBuildings3">Bina (GML)</label>
+                                </div>
+                                <div>
+                                    <span id="zoomToMimari" style="cursor:pointer"><i class="far fa-expand"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 d-flex justify-content-between">
+
+                                <div class="form-check ">
+                                    <input type="checkbox" name="buildings3" class="form-check-input" id="chkBnIst" value="bina-gml2">
+                                    <label class="form-check-label" for="chkBnIst">Bina (Mimari ?st.)</label>
+                                </div>
+                                <div>
+                                    <span id="zoomToMimariIst" style="cursor:pointer"><i class="far fa-expand"></i></span>
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+
+
+                </div>
+
+
+                <div class="card">
+                    <div class="card-header p-0" id="heading3">
+
+                        <h2 class="mb-0">
+                            <button class="d-flex py-2 px-4 align-items-center justify-content-between btn btn-link collapsed" data-bs-toggle="collapse" data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
+                                <div class="heading d-flex align-items-center">
+                                    <div class="icon d-flex align-items-center justify-content-center">
+                                        <span class="fas fa-globe-europe"></span>
+                                    </div>
+                                    <h3 class="mb-0 ms-3">Aç?k Servisler</h3>
+                                </div>
+                            </button>
+                        </h2>
+                    </div>
+
+                    <div id="collapse3" class="collapse" aria-labelledby="heading3" data-bs-parent="#accordion" style="">
+                        <div class="card-body text-bg-dark">
+
+                            <div class="mb-3 d-flex justify-content-between">
+                                <div class="form-check ">
+                                    <input type="checkbox" name="quake" class="form-check-input" id="chkQuake" value="quake">
+                                    <label class="form-check-label" for="chkQuake">Son Depremler</label>
+                                </div>
+                                <span id="zoomToQuake" style="cursor:pointer"><i class="far fa-expand"></i></span>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+
+
+                </div>
+
+
+            </div>
+
+            <div class="mt-3">
+                <div class="form-check form-switch">
+                    <input type="checkbox" name="weather" class="form-check-input" id="chkhava" value="havadurumu">
+                    <label class="form-check-label" for="chkhava">Anl?k Hava Durumu</label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <div id="mapContainer" style="height:100vh;"></div>
+    <div id="queryDiv" class="esri-widget">
+        <b>Query by geometry</b><br />
+        <br />Draw a geometry to query by:
+        <div class="geometry-options">
+            <button class="esri-widget--button esri-icon-map-pin geometry-button"
+                    id="point-geometry-button"
+                    value="point"
+                    title="Query by point"></button>
+            <button class="esri-widget--button esri-icon-polyline geometry-button"
+                    id="line-geometry-button"
+                    value="polyline"
+                    title="Query by line"></button>
+            <button class="esri-widget--button esri-icon-polygon geometry-button"
+                    id="polygon-geometry-button"
+                    value="polygon"
+                    title="Query by polygon"></button>
+        </div>
+        <br />
+        <div class="tooltip">
+            <label for="bufferNum">Set a geometry buffer size:</label>
+            <div id="bufferNum"></div>
+        </div>
+        <br />
+        <button class="esri-button" id="clearGeometry" type="button">Clear</button>
+    </div>
+
+    <div id="resultDiv" class="esri-widget">
+        <div class="count">
+            Selected Buildings:
+            <div class="count" id="count">0</div>
+        </div>
+        <div class="charts">
+            <div>
+                <canvas id="year-chart" height="250" width="260" />
+            </div>
+            <div>
+                <canvas id="material-chart" width="250" height="300" />
+            </div>
+        </div>
+    </div>
+
+    <div id="weatherBox" class="box weather-box" style="display:none;">
+        <div class="weather-header">Artova</div>
+        <div class="weather-body">
+            <div class="weather-left">
+                <img src="/images/weather/04d.png" class="weather-image" alt="icons8-sun-94">
+            </div>
+            <div class="weather-right">
+                <p class="weather-value">7.03°</p>
+                <p class="weather-description">kapal?</p>
+            </div>
+        </div>
+        <div class="weather-footer">
+            <div class="icon-box">
+                <img src="/images/weather/basinc.png" class="image" alt="icon">
+                <span class="basinc">1014hPA</span>
+            </div>
+            <div class="icon-box">
+                <img src="/images/weather/wind.png" class="image" alt="icon">
+                <span class="ruzgar">1.6m/s</span>
+            </div>
+            <div class="icon-box">
+                <img src="/images/weather/nem.png" class="image" alt="icon">
+                <span class="nem">% 70</span>
+            </div>
+        </div>
+    </div>
+    <script src="~/js/turf.min.js"></script>
+    <link href="~/lib/ion-rangeslider/ion.rangeSlider.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.1/js/ion.rangeSlider.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.32/"></script>
+    <script src="~/js/home3.js?d=@(Guid.CreateVersion7().ToString("N"))" asp-append-version="true"></script>
+
+    <script>
+        document.getElementById("btnDashboard").addEventListener("click", function () {
+            window.location.href = "/Home/Cesium";
+        });
+    </script>
+</body>
+</html>
