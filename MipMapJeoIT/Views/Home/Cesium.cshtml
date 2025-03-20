@@ -24,8 +24,7 @@
 
     <link rel="shortcut icon" href="/favicon.ico">
 
-
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         #locationChart, #statusChart, #phaseChart {
             width: 100%; /* Ensures charts take full width of col-4 */
@@ -79,18 +78,64 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-black fixed-top">
         <div class="container-fluid">
-            <button type="button" id="btnHome" class="btn btn-outline-tanap" title="Home">
-                <i class="fas fa-home text-light"></i>
-            </button>
-            <a class="navbar-brand p-0" href="https://www.mipmap-technologies.com/" target="_blank">
+            <!-- Butonlarý sola hizalamak için yeni bir div ekledik -->
+            <div class="d-flex align-items-center gap-2 me-auto">
+                <!-- Home Butonu -->
+                <button type="button" id="btnHome" class="btn btn-outline-tanap" title="Home">
+                    <i class="fas fa-home text-light"></i>
+                </button>
 
+                <!-- Drawer -->
+                <button type="button" class="btn btn-outline-tanap" title="Legend" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+                    <i class="fas fa-bars text-light"></i>
+                </button>
+
+                <!-- Dropdown Menü -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-tanap dropdown-toggle" type="button" id="yearDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Choose Year
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="yearDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="selectYear(2020)">2020</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="selectYear(2050)">2050</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="selectYear(2080)">2080</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <a class="navbar-brand p-0" href="https://www.mipmap-technologies.com/" target="_blank">
                 <img src="~/images/odtu.png" alt="Logo" class="img-fluid" style="max-height:32px;" />
             </a>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="true" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
         </div>
     </nav>
+
+    <!-- Drawer (Offcanvas Sidebar) -->
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+@*         <div class="offcanvas-body">
+            <ul class="list-group mb-5">
+                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 1</a></li>
+            </ul>
+            <ul class="list-group mb-5">
+                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 2</a></li>
+            </ul>
+            <ul class="list-group">
+                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 3</a></li>
+            </ul>
+        </div> *@
+        <div class="offcanvas-body">
+            <div id="scenarioCards" class="row g-3">
+                <!-- senaryos -->
+            </div>
+        </div>
+    </div>
 
     <div class="card shadow-sm mt-3" style="padding-top : 60px">
         <div class="card-body">
@@ -113,9 +158,8 @@
     </div>
 
 
-
-
-
+    <!-- Bootstrap JS (Body'nin en altýna ekleyin) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.1/js/ion.rangeSlider.min.js"></script>
@@ -127,6 +171,9 @@
         document.getElementById("btnHome").addEventListener("click", function () {
             window.location.href = "/Home/Index";
         });
+                function selectYear(year) {
+            document.getElementById("yearDropdown").innerHTML = year;
+        }
     </script>
 </body>
 </html>

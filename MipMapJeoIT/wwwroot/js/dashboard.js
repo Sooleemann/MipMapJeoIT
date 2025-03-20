@@ -284,99 +284,37 @@ function QHeating_TotalHeating(qheatS1,theatS1) {
     chart.render();
 }
 
+document.addEventListener("DOMContentLoaded", function () {
+    // LocalStorage'dan senaryolarý al
+    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
+    let scenarioCardsContainer = document.getElementById("scenarioCards");
 
-// Perform the query
-//featureLayer.queryFeatures(queries[0]).then(function (response) {
-//    // Iterate through the features and extract the specified attribute
-//    response.features.forEach(function (feature) {
-
-//        if (selectedYear1 == 2020) {
-
-//            Iod2020.push(feature.attributes.IOD_2020);
-//            Qheat2020.push(feature.attributes.Q_Heating_2020__kWh_m2_);
-//            TotalHeat20.push(feature.attributes.total_heating_2020);
-
-//        }
-//        else if (selectedYear1 == 2050) {
-
-//            Iod2050.push(feature.attributes.IOD_2050);
-//            Qheat2050.push(feature.attributes.Q_Heating_2050__kWh_m2_);
-//            TotalHeat50.push(feature.attributes.total_heating_2050);
-
-//        } else if (selectedYear1 == 2080) {
-
-//            Iod2080.push(feature.attributes.IOD_2080);
-//            Qheat2080.push(feature.attributes.Q_Heating_2080__kWh_m2_);
-//            TotalHeat80.push(feature.attributes.total_heating_2080);
-
-//        }
-//    });
-//}).catch(function (error) {
-//    console.error(error);
-//});
-
-//featureLayer.queryFeatures(queries[1]).then(function (response) {
-//    // Iterate through the features and extract the specified attribute
-//    response.features.forEach(function (feature) {
-
-//        if (selectedYear1 == 2020) {
-
-//            Iod2020.push(feature.attributes.IOD_2020);
-//            Qheat2020.push(feature.attributes.Q_Heating_2020__kWh_m2_);
-//            TotalHeat20.push(feature.attributes.total_heating_2020);
-
-//        }
-//        else if (selectedYear1 == 2050) {
-
-//            Iod2050.push(feature.attributes.IOD_2050);
-//            Qheat2050.push(feature.attributes.Q_Heating_2050__kWh_m2_);
-//            TotalHeat50.push(feature.attributes.total_heating_2050);
-
-//        } else if (selectedYear1 == 2080) {
-
-//            Iod2080.push(feature.attributes.IOD_2080);
-//            Qheat2080.push(feature.attributes.Q_Heating_2080__kWh_m2_);
-//            TotalHeat80.push(feature.attributes.total_heating_2080);
-
-//        }
-//    });
-//}).catch(function (error) {
-//    console.error(error);
-//});
-
-//featureLayer.queryFeatures(queries[2]).then(function (response) {
-//    // Iterate through the features and extract the specified attribute
-//    response.features.forEach(function (feature) {
-
-//        if (selectedYear1 == 2020) {
-
-//            Iod2020.push(feature.attributes.IOD_2020);
-//            Qheat2020.push(feature.attributes.Q_Heating_2020__kWh_m2_);
-//            TotalHeat20.push(feature.attributes.total_heating_2020);
-
-//        }
-//        else if (selectedYear1 == 2050) {
-
-//            Iod2050.push(feature.attributes.IOD_2050);
-//            Qheat2050.push(feature.attributes.Q_Heating_2050__kWh_m2_);
-//            TotalHeat50.push(feature.attributes.total_heating_2050);
-
-//        } else if (selectedYear1 == 2080) {
-
-//            Iod2080.push(feature.attributes.IOD_2080);
-//            Qheat2080.push(feature.attributes.Q_Heating_2080__kWh_m2_);
-//            TotalHeat80.push(feature.attributes.total_heating_2080);
-
-//        }
-//    });
-//}).catch(function (error) {
-//    console.error(error);
-//});
+    // Senaryolarý kartlar olarak ekle
+    storedScenarios.forEach((scenario, index) => {
+        let card = document.createElement("div");
+        card.className = "col-12";  // Kartlarýn alt alta sýralanmasý için full width (12 sütun)
+        card.innerHTML = `
+            <div class="card bg-dark text-white mb-3">
+                <div class="card-header">
+                    Scenario ${index + 1} (Year: ${scenario.selectedYear})
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Function:</strong> ${scenario.function_}</li>
+                        <li><strong>Infiltration:</strong> ${scenario.infiltration}</li>
+                        <li><strong>SHGC:</strong> ${scenario.shgc}</li>
+                        <li><strong>U-Ground:</strong> ${scenario.uground}</li>
+                        <li><strong>U-Roof:</strong> ${scenario.uroof}</li>
+                        <li><strong>U-Wall:</strong> ${scenario.uwall}</li>
+                        <li><strong>U-Window:</strong> ${scenario.uwindow}</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        scenarioCardsContainer.appendChild(card);
+    });
+});
 
 
-//Co2EmissionChart(Iod2020, Iod2050, Iod2080);
-//QHeatingChart(Qheat2020, Qheat2050, Qheat2080);
-//TotalHeatingChart(TotalHeat20, TotalHeat50, TotalHeat80);
-//Qheat_IOD(Iod2020, Iod2050, Iod2080, Qheat2020, Qheat2050, Qheat2080);
-//TotalCost_IOD(Iod2020, Iod2050, Iod2080, TotalHeat20, TotalHeat50, TotalHeat80);
-//QHeating_TotalHeating(Qheat2020, Qheat2050, Qheat2080, TotalHeat20, TotalHeat50, TotalHeat80);
+
+
