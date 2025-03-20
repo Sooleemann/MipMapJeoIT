@@ -1,199 +1,260 @@
+require(["esri/layers/FeatureLayer", "esri/rest/support/Query"], function (FeatureLayer, Query) {
 
-const data = [23, 45, 12, 56, 34, 48, 19, 50, 38, 29];
 
-function computeBoxPlotValues(data) {
-    data.sort((a, b) => a - b); // Sort values ascending
+    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
 
-    const min = data[0];
-    const max = data[data.length - 1];
+    let Iod2020 = [];
+    let Iod2050 = [];
+    let Iod2080 = [];
+    let Qheat2020 = [];
+    let Qheat2050 = [];
+    let Qheat2080 = [];
+    let TotalHeat20 = [];
+    let TotalHeat50 = [];
+    let TotalHeat80 = [];
 
-    const median = getPercentile(data, 50);
-    const q1 = getPercentile(data, 25);
-    const q3 = getPercentile(data, 75);
+    var query = new Query();
+    query.where = "OBJECTID IN (" + storedScenarios[0].objectIdList.join(", ") + ")";// Array of Object IDs you want to query
+    query.outFields = ["*"]; // You can specify which fields to return
+    query.returnGeometry = true;
 
-    return [min, q1, median, q3, max];
+    // Reference to your FeatureLayer
+    var featureLayer = new FeatureLayer({
+        url: "https://services3.arcgis.com/U6foQVCzh67NkRmC/arcgis/rest/services/IOD_multipatch_3857_/FeatureServer/23"
+    });
+
+
+    // Perform the query
+    featureLayer.queryFeatures(query).then(function (response) {
+        // Iterate through the features and extract the specified attribute
+        response.features.forEach(function (feature) {
+            
+            Iod2020.push(feature.attributes.IOD_2020);  
+            Iod2050.push(feature.attributes.IOD_2050);  
+            Iod2080.push(feature.attributes.IOD_2080); 
+
+            Qheat2020.push(feature.attributes.Q_Heating_2020__kWh_m2_);
+            Qheat2050.push(feature.attributes.Q_Heating_2050__kWh_m2_);
+            Qheat2080.push(feature.attributes.Q_Heating_2080__kWh_m2_);
+
+            TotalHeat20.push(feature.attributes.total_heating_2020);
+            TotalHeat50.push(feature.attributes.total_heating_2050);
+            TotalHeat80.push(feature.attributes.total_heating_2080);
+        });
+        Co2EmissionChart(Iod2020, Iod2050, Iod2080);
+        QHeatingChart(Qheat2020, Qheat2050, Qheat2080);
+        TotalHeatingChart(TotalHeat20, TotalHeat50, TotalHeat80);
+        Qheat_IOD(Iod2020, Iod2050, Iod2080, Qheat2020, Qheat2050, Qheat2080);
+        TotalCost_IOD(Iod2020, Iod2050, Iod2080, TotalHeat20, TotalHeat50, TotalHeat80);
+        QHeating_TotalHeating(Qheat2020, Qheat2050, Qheat2080, TotalHeat20, TotalHeat50, TotalHeat80);
+
+
+    }).catch(function (error) {
+        console.error(error);
+    });
+
+   
+
+
+
+
+});
+
+function Co2EmissionChart(iod2020, iod2050, iod2080) {
+    var options = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: "Scenario 1", y: iod2020 },
+                    { x: "Scenario 2", y: iod2050 },
+                    { x: "Scenario 3", y: iod2080 }
+                ]
+            }
+        ],
+        chart: {
+            type: "boxPlot",
+            height: 350
+        },
+        title: {
+            text: "Co2 Emission"
+        },
+        xaxis: {
+            type: "category"
+        }
+    };
+
+    const chart = new ApexCharts(document.querySelector("#locationChart"), options);
+    chart.render();
 }
-function getPercentile(sortedData, percentile) {
-    const index = (percentile / 100) * (sortedData.length - 1);
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
 
-    if (lower === upper) return sortedData[lower];
-
-    return sortedData[lower] + (sortedData[upper] - sortedData[lower]) * (index - lower);
+function QHeatingChart(qheat20,qheat50,qheat80)
+{
+    var options = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: "Scenario 1", y: qheat20 },
+                    { x: "Scenario 2", y: qheat50 },
+                    { x: "Scenario 3", y: qheat80 }
+                ]
+            }
+        ],
+        chart: {
+            type: "boxPlot",
+            height: 350
+        },
+        title: {
+            text: "Q Heating"
+        },
+        xaxis: {
+            type: "category"
+        }
+    };
+    const chart = new ApexCharts(document.querySelector("#statusChart"), options);
+    chart.render();
 }
-var options = {
-    series: [
-        {
-            name: "Dataset 1",
+
+function TotalHeatingChart(totalHeat20, totalHeat50, totalHeat80) {
+    var options = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: "Scenario 1", y: totalHeat20 },
+                    { x: "Scenario 2", y: totalHeat50 },
+                    { x: "Scenario 3", y: totalHeat80 }
+                ]
+            }
+        ],
+        chart: {
             type: "boxPlot",
-            data: [
-                { x: "Scenario 1", y: [50, 60, 70, 80, 90] },
-                { x: "Scenario 2", y: [30, 40, 50, 60, 70] },
-                { x: "Scenario 3", y: [20, 30, 40, 50, 60] }
-            ]
-        }
-    ],
-    chart: {
-        type: "boxPlot",
-        height: 350
-    },
-    title: {
-        text: "Q Heating"
-    },
-    xaxis: {
-        type: "category"
-    }
-};
-
-const chart = new ApexCharts(document.querySelector("#locationChart"), options);
-chart.render();
-
-var options2 = {
-    series: [
-        {
-            name: "Dataset 1",
-            type: "boxPlot",
-            data: [
-                { x: "Scenario 1", y: [50, 60, 70, 80, 90] },
-                { x: "Scenario 2", y: [30, 40, 50, 60, 70] },
-                { x: "Scenario 3", y: [20, 30, 40, 50, 60] }
-            ]
-        }
-    ],
-    chart: {
-        type: "boxPlot",
-        height: 350
-    },
-    title: {
-        text: "Co2 Emission"
-    },
-    xaxis: {
-        type: "category"
-    }
-};
-
-const chart2 = new ApexCharts(document.querySelector("#statusChart"), options2);
-chart2.render();
-
-var options3 = {
-    series: [
-        {
-            name: "Dataset 1",
-            type: "boxPlot",
-            data: [
-                { x: "Scenario 1", y: [50, 60, 70, 80, 90] },
-                { x: "Scenario 2", y: [30, 40, 50, 60, 70] },
-                { x: "Scenario 3", y: [20, 30, 40, 50, 60] }
-            ]
-        }
-    ],
-    chart: {
-        type: "boxPlot",
-        height: 350
-    },
-    title: {
-        text: "Total Cost"
-    },
-    xaxis: {
-        type: "category"
-    }
-};
-
-const chart3 = new ApexCharts(document.querySelector("#phaseChart"), options3);
-chart3.render();
-
-var options4 = {
-    chart: {
-        type: 'scatter',
-        height: 350,
-        zoom: { enabled: true, type: 'xy' }
-    },
-    series: [
-        {
-            name: "Group 1 (Red)",
-            data: [
-                [145, 150], [147, 152], [148, 155], [149, 158],
-                [150, 160], [151, 162], [152, 165], [153, 168]
-            ],
-            color: 'red'
+            height: 350
         },
-        {
-            name: "Group 2 (Blue)",
-            data: [
-                [155, 170], [156, 173], [157, 175], [158, 178],
-                [159, 180], [160, 183], [161, 185], [162, 188]
-            ],
-            color: 'blue'
-        }
-    ],
-    xaxis: { title: { text: "TotalCost" }, min: 140, max: 180 },
-    yaxis: { title: { text: "Q Heating" }, min: 140, max: 220 },
-    stroke: { curve: "smooth" }
-};
-const chart4 = new ApexCharts(document.querySelector("#locationChart2"), options4);
-chart4.render();
-
-var options5 = {
-    chart: {
-        type: 'scatter',
-        height: 350,
-        zoom: { enabled: true, type: 'xy' }
-    },
-    series: [
-        {
-            name: "Group 1 (Red)",
-            data: [
-                [145, 150], [147, 152], [148, 155], [149, 158],
-                [150, 160], [151, 162], [152, 165], [153, 168]
-            ],
-            color: 'red'
+        title: {
+            text: "Total Heating"
         },
-        {
-            name: "Group 2 (Blue)",
-            data: [
-                [155, 170], [156, 173], [157, 175], [158, 178],
-                [159, 180], [160, 183], [161, 185], [162, 188]
-            ],
-            color: 'blue'
+        xaxis: {
+            type: "category"
         }
-    ],
-    xaxis: { title: { text: "TotalCost" }, min: 140, max: 180 },
-    yaxis: { title: { text: "Carbon Emission" }, min: 140, max: 220 },
-    stroke: { curve: "smooth" }
-};
+    };
+    const chart = new ApexCharts(document.querySelector("#phaseChart"), options);
+    chart.render();
+}
 
-const chart5 = new ApexCharts(document.querySelector("#statusChart2"), options5);
-chart5.render();
+function Qheat_IOD(iod2020, iod2050, iod2080, qheat20, qheat50, qheat80) {
 
-var options6 = {
-    chart: {
-        type: 'scatter',
-        height: 350,
-        zoom: { enabled: true, type: 'xy' }
-    },
-    series: [
-        {
-            name: "Group 1 (Red)",
-            data: [
-                [145, 150], [147, 152], [148, 155], [149, 158],
-                [150, 160], [151, 162], [152, 165], [153, 168]
-            ],
-            color: 'red'
+    ///diziler ayný deðerlerde olmadýðý için güzel görünmüyor , biri 0-1 arasý biri 30-60 arasý
+    //Dizi uzunluklarýný eþitle ve veriyi uygun formata çevir:
+    //let seriesData1 = iod2020.map((iod, index) => [iod, qheat20[index] || 0]);
+    //let seriesData2 = iod2050.map((iod, index) => [iod, qheat50[index] || 0]);
+    //let seriesData3 = iod2080.map((iod, index) => [iod, qheat80[index] || 0]);
+
+    var options = {
+        chart: {
+            type: 'scatter',
+            height: 350,
+            zoom: { enabled: true, type: 'xy' }
         },
-        {
-            name: "Group 2 (Blue)",
-            data: [
-                [155, 170], [156, 173], [157, 175], [158, 178],
-                [159, 180], [160, 183], [161, 185], [162, 188]
-            ],
-            color: 'blue'
-        }
-    ],
-    xaxis: { title: { text: "IOD" }, min: 140, max: 180 },
-    yaxis: { title: { text: "Q-Heating" }, min: 140, max: 220 },
-    stroke: { curve: "smooth" }
-};
+        series: [
+            {
+                name: "Group 1 (2020)",
+                data: iod2020,  // Ýlk seri: iod2020 ile qheat20
+                color: 'red'
+            },
+            {
+                name: "Group 2 (2020)",
+                data: qheat20,
+                color: 'blue'
+            }
+            //{
+            //    name: "Group 2 (2050)",
+            //    data: seriesData2, 
+            //    color: 'blue'
+            //},
+            //{
+            //    name: "Group 3 (2080)",
+            //    data: seriesData3, 
+            //    color: 'green'
+            //}
+        ],
+        xaxis: {
+            title: { text: "IOD" },
+            min: 0,  
+            max: 1   
+        },
+        yaxis: {
+            title: { text: "Q-Heating" },
+            min: 30,  
+            max:60 
+        },
+        stroke: { curve: "smooth" }
+    };
 
-const chart6 = new ApexCharts(document.querySelector("#phaseChart2"), options6);
-chart6.render();
+   chart = new ApexCharts(document.querySelector("#locationChart2"), options);
+   chart.render();
+
+}
+
+function TotalCost_IOD(iod2020, iod2050, iod2080,theat20,theat50,theat80) {
+    let seriesData1 = iod2020.map((iod, index) => [iod, theat20[index] || 0]);
+    let seriesData2 = iod2050.map((iod, index) => [iod, theat50[index] || 0]);
+    let seriesData23 = iod2080.map((iod, index) => [iod, theat80[index] || 0]);
+
+    console.log(seriesData1);
+    var options = {
+        chart: {
+            type: 'scatter',
+            height: 350,
+            zoom: { enabled: true, type: 'xy' }
+        },
+        series: [
+            {
+                name: "Group 1 (Red)",
+                data: iod2020,
+                color: 'red'
+            },
+            {
+                name: "Group 2 (Blue)",
+                data: theat20,
+                color: 'blue'
+            }
+        ],
+        xaxis: { title: { text: "TotalCost" }, min: 140, max: 180 },
+        yaxis: { title: { text: "IOD" }, min:0, max: 1 },
+        stroke: { curve: "smooth" }
+    };
+    const chart = new ApexCharts(document.querySelector("#statusChart2"), options);
+    chart.render();
+}
+
+function QHeating_TotalHeating(qheat20,qheat50,qheat80,theat20,theat50,theat80) {
+    var options = {
+        chart: {
+            type: 'scatter',
+            height: 350,
+            zoom: { enabled: true, type: 'xy' }
+        },
+        series: [
+            {
+                name: "Group 1 (Red)",
+                data: qheat20,
+                color: 'red'
+            },
+            {
+                name: "Group 2 (Blue)",
+                data: theat20,
+                color: 'blue'
+            }
+        ],
+        xaxis: { title: { text: "IOD" }, min: 140, max: 180 },
+        yaxis: { title: { text: "TotalHeating" }, min: 140, max: 220 },
+        stroke: { curve: "smooth" }
+    };
+    const chart = new ApexCharts(document.querySelector("#phaseChart2"), options);
+    chart.render();
+}

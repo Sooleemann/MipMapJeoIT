@@ -479,6 +479,8 @@ function clearCharts() {
     }
 createYearChart();
     createMaterialChart();
+
+    let oidd;
     function filter2() {
 
         var v = $('#ddlLayer').val();
@@ -547,6 +549,7 @@ createYearChart();
         sceneLayer.fields.forEach(f => {
             console.log(`Field: ${f.name}, Type: ${f.type}`);
         });
+        
         let whereClause = query.join(" AND ");
         //sceneLayerView.queryObjectIds(whereClause).then(highlightBuildings);
         console.log("Object ID Field:", sceneLayer.objectIdField);
@@ -568,7 +571,9 @@ createYearChart();
 
 
         }).then((result) => {
-                //let objectIds = result.features.map(feature => feature.attributes.OBJECTID);
+            //let objectIds = result.features.map(feature => feature.attributes.OBJECTID);
+            console.log(result);
+            oidd = result;
             highlightBuildings(result); 
 
         });
@@ -653,6 +658,35 @@ createYearChart();
             }]
         };
     }
+
+    
+
+    document.getElementById("btnScenario").addEventListener("click", function () {
+        var scenarioData = {
+            objectIdList: oidd,  // oidd burada daha önce tanýmlanmýþ olmalý
+            selectedYear: document.getElementById("yearDropdown").value,
+            function_: document.getElementById("functionSlider").value,
+            uwall: document.getElementById("uwallSlider").value,
+            uwindow: document.getElementById("uwindowSlider").value,
+            uroof: document.getElementById("uroofSlider").value,
+            uground: document.getElementById("ugroundSlider").value,
+            shgc: document.getElementById("shgcSlider").value,
+            infiltration: document.getElementById("infiltrationSlider").value,
+        };
+
+        //// varsa onceki senaryoyu al
+        let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
+
+        if (storedScenarios.length >= 3) { // Eðer 3 senaryo varsa
+            storedScenarios.shift(); // En eski senaryoyu sil
+        }
+
+        storedScenarios.push(scenarioData);
+
+        localStorage.setItem("scenarios", JSON.stringify(storedScenarios));
+    });
+   
+
 
 
 });

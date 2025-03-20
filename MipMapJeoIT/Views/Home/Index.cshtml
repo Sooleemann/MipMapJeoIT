@@ -266,10 +266,25 @@
                                 </div>
                             </td>
                         </tr>
+                        <tr>
+                            <td>Select a year</td>
+                            <td>
+                                <div>
+                                    <select id="yearDropdown">
+                                        <option value="2020">2020</option>
+                                        <option value="2050">2050</option>
+                                        <option value="2080">2080</option>
+                                    </select>
+                                </div>
+                            </td>
+                        </tr>
                     </table>
-                    <div class="text-end">
-                        <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
-                        <button class="btn btn-dark btn-sm" id="btnFilter"><i class="fa fa-filter"></i> Filter</button>
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-primary btn-sm" id="btnScenario">Create Scenario</button>
+                        <div class="text-end">
+                            <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
+                            <button class="btn btn-dark btn-sm" id="btnFilter"><i class="fa fa-filter"></i> Filter</button>
+                        </div>
                     </div>
                 </div>
 
