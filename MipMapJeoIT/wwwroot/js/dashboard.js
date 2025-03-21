@@ -1,33 +1,39 @@
+ï»¿let iodChart;
+let qHeatingChart;
+let totalHeatingChart; ///chartss
+
+// Senaryolar 
+let scenarioData = {
+    scenario1: {
+        Iod: [],
+        Qheat: [],
+        TotalHeat: []
+    },
+    scenario2: {
+        Iod: [],
+        Qheat: [],
+        TotalHeat: []
+    },
+    scenario3: {
+        Iod: [],
+        Qheat: [],
+        TotalHeat: []
+    }
+};
+
 require(["esri/layers/FeatureLayer", "esri/rest/support/Query"], function (FeatureLayer, Query) {
 
-    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
+    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || []; // LocalStorage'dan senaryolarÄ± aldÄ±k
 
-    let queries = [];  // Her senaryo için query'leri tutacak
+    let queries = [];  // Her senaryo iÃ§in query'leri tutacak
 
-    // Senaryolar için veri dizilerini oluþturuyoruz
-    let scenarioData = {
-        scenario1: {
-            Iod: [],
-            Qheat: [],
-            TotalHeat: []
-        },
-        scenario2: {
-            Iod: [],
-            Qheat: [],
-            TotalHeat: []
-        },
-        scenario3: {
-            Iod: [],
-            Qheat: [],
-            TotalHeat: []
-        }
-    };
+
 
     var featureLayer = new FeatureLayer({
         url: "https://services3.arcgis.com/U6foQVCzh67NkRmC/arcgis/rest/services/IOD_multipatch_3857_/FeatureServer/23"
     });
 
-    // Her senaryo için query oluþturuyoruz
+    // Her senaryo iÃ§in query oluÅŸturuyoruz
     storedScenarios.forEach(function (scenario, index) {
 
         let query = new Query();
@@ -38,19 +44,20 @@ require(["esri/layers/FeatureLayer", "esri/rest/support/Query"], function (Featu
         queries.push({ query, year: scenario.selectedYear, index: index });
     });
 
+    console.log(queries);
 
     let promises = queries.map(function (item) {
 
-        return queryFeaturesForScenario(item.query, item.year, item.index); // her query ve yýl için veriyi iþle
+        return queryFeaturesForScenario(item.query, item.year, item.index); // her query ve yÄ±l iÃ§in veriyi iÅŸle
     });
 
-    // Asenkron iþlemleri tamamladýktan sonra grafikleri oluþturacaðýz
+    // Asenkron iÅŸlemleri tamamladÄ±ktan sonra grafikleri oluÅŸturacaÄŸÄ±z
     Promise.all(promises).then(function () {
-        // Veriler alýndýktan sonra grafik oluþturma iþlemleri
+        // Veriler alÄ±ndÄ±ktan sonra grafik oluÅŸturma iÅŸlemleri
         Co2EmissionChart(scenarioData.scenario1, scenarioData.scenario2, scenarioData.scenario3);
         QHeatingChart(scenarioData.scenario1, scenarioData.scenario2, scenarioData.scenario3);
         TotalHeatingChart(scenarioData.scenario1, scenarioData.scenario2, scenarioData.scenario3);
-        Qheat_IOD(scenarioData.scenario1.Iod, scenarioData.scenario1.Qheat); //sadece senaryo 1 için verileri gönderdim
+        Qheat_IOD(scenarioData.scenario1.Iod, scenarioData.scenario1.Qheat);                       //sadece senaryo 1 iÃ§in verileri gÃ¶nderdim
         TotalCost_IOD(scenarioData.scenario1.TotalHeat, scenarioData.scenario1.Iod);
         QHeating_TotalHeating(scenarioData.scenario1.Qheat, scenarioData.scenario1.TotalHeat);
     }).catch(function (error) {
@@ -60,16 +67,16 @@ require(["esri/layers/FeatureLayer", "esri/rest/support/Query"], function (Featu
     function queryFeaturesForScenario(query, selectedYear, index) {
 
         return featureLayer.queryFeatures(query).then(function (response) {
-            processQueryResponse(response, selectedYear, index);  // Veriyi iþleme
+            processQueryResponse(response, selectedYear, index);  // Veriyi iÅŸleme
         }).catch(function (error) {
             console.error(error);
         });
     }
 
-    // Verileri iþleyen fonksiyon
+    // Verileri iÅŸleyen fonksiyon
     function processQueryResponse(response, selectedYear, index) {
         response.features.forEach(function (feature) {
-            let scenarioKey = 'scenario' + (index + 1); // Senaryo anahtarýný oluþturuyoruz
+            let scenarioKey = 'scenario' + (index + 1); // Senaryo anahtarÄ±nÄ± oluÅŸturuyoruz
 
             if (selectedYear == 2020) {
                 scenarioData[scenarioKey].Iod.push(feature.attributes.IOD_2020);
@@ -87,6 +94,7 @@ require(["esri/layers/FeatureLayer", "esri/rest/support/Query"], function (Featu
             }
         });
     }
+
 });
 
 
@@ -116,8 +124,8 @@ function Co2EmissionChart(scenario1, scenario2, scenario3) {
         }
     };
 
-    const chart = new ApexCharts(document.querySelector("#locationChart"), options);
-    chart.render();
+    iodChart = new ApexCharts(document.querySelector("#locationChart"), options);
+    iodChart.render();
 }
 function QHeatingChart(scenario1, scenario2, scenario3) {
     var options = {
@@ -143,8 +151,8 @@ function QHeatingChart(scenario1, scenario2, scenario3) {
             type: "category"
         }
     };
-    const chart = new ApexCharts(document.querySelector("#statusChart"), options);
-    chart.render();
+    qHeatingChart = new ApexCharts(document.querySelector("#statusChart"), options);
+    qHeatingChart.render();
 }
 function TotalHeatingChart(scenario1, scenario2, scenario3) {
     var options = {
@@ -170,14 +178,14 @@ function TotalHeatingChart(scenario1, scenario2, scenario3) {
             type: "category"
         }
     };
-    const chart = new ApexCharts(document.querySelector("#phaseChart"), options);
-    chart.render();
+    totalHeatingChart = new ApexCharts(document.querySelector("#phaseChart"), options);
+    totalHeatingChart.render();
 }
 
-
+// senaryo 1 verileri
 function Qheat_IOD(iodS1, qheatS1) {
-//Senaryo 1 için verileri gösterildi
-    //Dizi uzunluklarýný eþitle ve veriyi uygun formata çevir:
+//Senaryo 1 iÃ§in verileri gÃ¶sterildi
+    //Dizi uzunluklarÄ±nÄ± eÅŸitle ve veriyi uygun formata Ã§evir:
     //let seriesData1 = iod2020.map((iod, index) => [iod, qheat20[index] || 0]);
     //let seriesData2 = iod2050.map((iod, index) => [iod, qheat50[index] || 0]);
     //let seriesData3 = iod2080.map((iod, index) => [iod, qheat80[index] || 0]);
@@ -191,7 +199,7 @@ function Qheat_IOD(iodS1, qheatS1) {
         series: [
             {
                 name: "Group 1 (2020)",
-                data: iodS1,  // Ýlk seri: iod2020 ile qheat20
+                data: iodS1,  // Ä°lk seri: iod2020 ile qheat20
                 color: 'red'
             },
             {
@@ -228,7 +236,7 @@ function Qheat_IOD(iodS1, qheatS1) {
 
 }
 
-///senaryo 1 için verileri gösterdim
+///senaryo 1 verileri
 function TotalCost_IOD(theadS1,iodS1) {
 
     var options = {
@@ -256,7 +264,7 @@ function TotalCost_IOD(theadS1,iodS1) {
     const chart = new ApexCharts(document.querySelector("#statusChart2"), options);
     chart.render();
 }
-///Senaryo 1 için verileri gösterdim
+///Senaryo 1 verileri 
 function QHeating_TotalHeating(qheatS1,theatS1) {
     var options = {
         chart: {
@@ -284,15 +292,19 @@ function QHeating_TotalHeating(qheatS1,theatS1) {
     chart.render();
 }
 
+
+
+
+///Compare iÃ§in, drawerda gÃ¶sterme
 document.addEventListener("DOMContentLoaded", function () {
-    // LocalStorage'dan senaryolarý al
+    // LocalStorage'dan senaryolarÄ± al
     let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
     let scenarioCardsContainer = document.getElementById("scenarioCards");
 
-    // Senaryolarý kartlar olarak ekle
+    // SenaryolarÄ± card iÃ§erisinde 
     storedScenarios.forEach((scenario, index) => {
         let card = document.createElement("div");
-        card.className = "col-12";  // Kartlarýn alt alta sýralanmasý için full width (12 sütun)
+        card.className = "col-12";  
         card.innerHTML = `
             <div class="card bg-dark text-white mb-3">
                 <div class="card-header">
@@ -300,13 +312,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled">
-                        <li><strong>Function:</strong> ${scenario.function_}</li>
-                        <li><strong>Infiltration:</strong> ${scenario.infiltration}</li>
-                        <li><strong>SHGC:</strong> ${scenario.shgc}</li>
-                        <li><strong>U-Ground:</strong> ${scenario.uground}</li>
-                        <li><strong>U-Roof:</strong> ${scenario.uroof}</li>
-                        <li><strong>U-Wall:</strong> ${scenario.uwall}</li>
-                        <li><strong>U-Window:</strong> ${scenario.uwindow}</li>
+                        <li><strong>Function:</strong> between ${scenario.function_}</li>
+                        <li><strong>Infiltration:</strong> between ${scenario.infiltration}</li>
+                        <li><strong>SHGC:</strong> between ${scenario.shgc}</li>
+                        <li><strong>U-Ground:</strong> between ${scenario.uground}</li>
+                        <li><strong>U-Roof:</strong> between ${scenario.uroof}</li>
+                        <li><strong>U-Wall:</strong> between ${scenario.uwall}</li>
+                        <li><strong>U-Window:</strong> between ${scenario.uwindow}</li>
                     </ul>
                 </div>
             </div>
@@ -316,5 +328,42 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
+// yÄ±llara gÃ¶re
+function selectYear(year) {
+    document.getElementById("yearDropdown").textContent = `Year: ${year}`; // SeÃ§ilen yÄ±lÄ± butona yazdÄ±r
+
+    // Eski grafik verilerini temizleyelim
+    if (iodChart) {
+        iodChart.destroy(); // Mevcut iod grafiklerini destroy
+    }
+    if (qHeatingChart) {
+        qHeatingChart.destroy(); // Q Heating grafiklerini de
+    }
+    if (totalHeatingChart) {
+        totalHeatingChart.destroy(); //  Total Heating grafiklerini de
+    }
 
 
+    if (year == 2020) {
+        //burasÄ± net deÄŸil , doldurulacak
+
+        //// GÃ¼ncellenen verileri tekrar Ã§izelim
+        //Co2EmissionChart(scenarioData.scenario1., scenarioData.scenario2, scenarioData.scenario3);
+        //QHeatingChart(scenarioData.scenario1, scenarioData.scenario2, scenarioData.scenario3);
+        //TotalHeatingChart(scenarioData.scenario1, scenarioData.scenario2, scenarioData.scenario3);
+
+        //// KartlarÄ± da gÃ¼ncelleyelim
+        //updateScenarioCards();
+    }
+
+
+
+}
+
+// KartlarÄ± GÃ¼ncelle
+function updateScenarioCards() {
+    let scenarioCardsContainer = document.getElementById("scenarioCards");
+
+    // KartlarÄ± iÃ§eriÄŸini sil
+    scenarioCardsContainer.innerHTML = "";
+}
