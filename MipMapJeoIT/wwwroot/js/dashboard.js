@@ -295,7 +295,7 @@ function QHeating_TotalHeating(qheatS1,theatS1) {
 
 
 
-///Compare için, drawerda gösterme
+/// senaryoları drawerda gösterme 
 document.addEventListener("DOMContentLoaded", function () {
     // LocalStorage'dan senaryoları al
     let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
@@ -356,8 +356,6 @@ function selectYear(year) {
         //updateScenarioCards();
     }
 
-
-
 }
 
 // Kartları Güncelle
@@ -367,3 +365,103 @@ function updateScenarioCards() {
     // Kartları içeriğini sil
     scenarioCardsContainer.innerHTML = "";
 }
+
+// Compare butonuna tıklanıldığında 
+document.getElementById('compareButton').addEventListener('click', function () {
+    // Seçilen senaryoları al
+    let scenario1 = document.getElementById('scenario1Select').value;
+    let scenario2 = document.getElementById('scenario2Select').value;
+
+    // İlgili verileri al ve grafikleri güncelle
+    let scenario1Data = scenarioData[scenario1];
+    let scenario2Data = scenarioData[scenario2];
+
+    // Eski grafik verilerini temizleyelim
+    if (iodChart) {
+        iodChart.destroy(); // Mevcut iod grafiklerini destroy
+    }
+    if (qHeatingChart) {
+        qHeatingChart.destroy(); // Q Heating grafiklerini de
+    }
+    if (totalHeatingChart) {
+        totalHeatingChart.destroy(); //  Total Heating grafiklerini de
+    }
+
+    var options = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: scenario1, y: scenario1Data.Iod }, // Scenario 1 verisi
+                    { x: scenario2, y: scenario2Data.Iod }, // Scenario 2 verisi
+                ]
+            }
+        ],
+        chart: {
+            type: "boxPlot",
+            height: 350
+        },
+        title: {
+            text: "Co2 Emission"
+        },
+        xaxis: {
+            type: "category"
+        }
+    };
+
+    iodChart = new ApexCharts(document.querySelector("#locationChart"), options);
+    iodChart.render();
+
+    var options2 = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: scenario1, y: scenario1Data.Qheat }, // Scenario 1 verisi
+                    { x: scenario2, y: scenario2Data.Qheat }, // Scenario 2 verisi
+                ]
+            }
+        ],
+        chart: {
+            type: "boxPlot",
+            height: 350
+        },
+        title: {
+            text: "Q Heating"
+        },
+        xaxis: {
+            type: "category"
+        }
+    };
+    qHeatingChart = new ApexCharts(document.querySelector("#statusChart"), options2);
+    qHeatingChart.render();
+
+
+    var options3 = {
+        series: [
+            {
+                name: "Dataset 1",
+                type: "boxPlot",
+                data: [
+                    { x: scenario1, y: scenario1Data.TotalHeat }, // Scenario 1 verisi
+                    { x: scenario2, y: scenario2Data.TotalHeat }, // Scenario 2 verisi
+                ]
+            }
+        ],
+        chart: {
+            type: "boxPlot",
+            height: 350
+        },
+        title: {
+            text: "Total Heating"
+        },
+        xaxis: {
+            type: "category"
+        }
+    };
+    totalHeatingChart = new ApexCharts(document.querySelector("#phaseChart"), options3);
+    totalHeatingChart.render();
+
+});

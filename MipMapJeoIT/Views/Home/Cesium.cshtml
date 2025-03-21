@@ -117,23 +117,46 @@
             <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-@*         <div class="offcanvas-body">
-            <ul class="list-group mb-5">
-                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 1</a></li>
-            </ul>
-            <ul class="list-group mb-5">
-                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 2</a></li>
-            </ul>
-            <ul class="list-group">
-                <li class="list-group-item bg-dark text-white"><a href="#">Scenario 3</a></li>
-            </ul>
-        </div> *@
         <div class="offcanvas-body">
+
+
+
+            <div class="card bg-dark text-white mb-3">
+                <div class="card-header">
+                    <h5 class="card-title">Compare Scenarios</h5>
+                </div>
+                <div class="card-body">
+                    <!-- ComboBox'lar (Dropdowns) yan yana -->
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label for="scenario1Select" class="form-label">Select Scenario 1</label>
+                            <select class="form-select" id="scenario1Select">
+                                <option value="scenario1">Scenario 1</option>
+                                <option value="scenario2">Scenario 2</option>
+                                <option value="scenario3">Scenario 3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="scenario2Select" class="form-label">Select Scenario 2</label>
+                            <select class="form-select" id="scenario2Select">
+                                <option value="scenario1">Scenario 1</option>
+                                <option value="scenario2">Scenario 2</option>
+                                <option value="scenario3">Scenario 3</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Karþýlaþtýrma Butonu -->
+                    <button class="btn btn-primary" id="compareButton">Compare</button>
+                </div>
+            </div>
+
             <div id="scenarioCards" class="row g-3">
                 <!-- senaryos -->
             </div>
         </div>
     </div>
+
 
     <div class="card shadow-sm mt-3" style="padding-top : 60px">
         <div class="card-body">
