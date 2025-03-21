@@ -684,6 +684,10 @@ createYearChart();
         storedScenarios.push(scenarioData);
 
         localStorage.setItem("scenarios", JSON.stringify(storedScenarios));
+
+        // Toast mesajýný göster
+        let toast = new bootstrap.Toast(document.getElementById('successToast'));
+        toast.show(); 
     });
    
 
