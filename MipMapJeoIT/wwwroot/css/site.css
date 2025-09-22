@@ -1,5 +1,5 @@
-html {
-    font-size: 14px;
+Ôªøhtml {
+    font-size: 0.875rem !important;
 }
 
 @media (min-width: 768px) {
@@ -19,6 +19,7 @@ html {
 
 body {
     margin-bottom: 60px;
+    position: relative;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -71,13 +72,13 @@ body {
     margin-top: 70px;
 }
 
-                                    /*Navbar biti˛i*/
+/*Navbar biti√æi*/
 
 
 
-                                                        /*Butonlar*/
-                                                               
-.btn-outline-tanap { 
+/*Butonlar*/
+
+.btn-outline-tanap {
     --bs-btn-color: #17479e;
     --bs-btn-border-color: #17479e;
     --bs-btn-hover-color: #fff;
@@ -117,7 +118,7 @@ body {
     }
 
 
-                            /*Drawer*/
+/*Drawer*/
 .offcanvas {
     margin-top: 65px;
 }
@@ -136,13 +137,11 @@ body {
     .myaccordion .card:last-child .card-header {
         border: none;
         background: transparent;
-
     }
 
     .myaccordion .card-header {
         border: none;
         background: transparent;
-
     }
 
         .myaccordion .card-header .heading {
@@ -180,7 +179,6 @@ body {
             overflow: hidden;
             background: #df7563;
             color: #fff;
-
         }
 
     .myaccordion .fa {
@@ -265,7 +263,6 @@ button[aria-expanded="false"] {
     border-style: solid;
     border-width: 15px 15px 0 15px;
     border-color: #fff transparent transparent transparent;
-
 }
 
 
@@ -313,15 +310,204 @@ button[aria-expanded="false"] {
 }
 
 .weather-left {
-    /* ›stediiniz boyutlar˝ buradan belirleyebilirsiniz */
+    /* √ùstedi√∞iniz boyutlar√Ω buradan belirleyebilirsiniz */
     width: 70px;
     height: 70px;
 }
 
 .weather-image {
-    /* Resmin boyutunu %100'e ayarlayarak ˆlÁeklendirir */
+    /* Resmin boyutunu %100'e ayarlayarak √∂l√ßeklendirir */
     width: 100%;
     height: auto;
 }
 
-/*Hava box biti˛*/
+/*Hava box biti√æ*/
+
+
+#buildingPopupOverlay {
+    pointer-events: none;
+}
+
+    #buildingPopupOverlay .popup-container {
+        pointer-events: auto;
+    }
+
+#buildingPopupOverlayMamak {
+    pointer-events: none;
+}
+
+    #buildingPopupOverlayMamak .popup-container {
+        pointer-events: auto;
+    }
+
+
+
+.popup-container {
+    width: 42vw;
+    max-width: 1100px;
+    margin: 3rem auto;
+    background-color: rgba(0,0,0,0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+}
+
+
+
+.nav-tabs .nav-link {
+    color: #F2F2F2;
+}
+
+    .nav-tabs .nav-link.active {
+        background-color: #EEBA50;
+        color: #1E2A38;
+    }
+
+.secondary-tabs .nav-link.active {
+    background-color: #00865A;
+    color: #fff;
+}
+
+.form-control[readonly] {
+    background-color: #34495E;
+    color: #F2F2F2;
+    border: 1px solid #495057;
+}
+
+.pdf-link, .img-thumbnail {
+    margin: 5px;
+}
+
+
+
+html, body, #viewDiv {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+
+
+.popup-container .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+}
+
+#oi-container {
+    top: 60px;
+    right: 15px;
+    position: fixed;
+    height: calc(100vh - 77px);
+    width: 45%;
+}
+
+@media (max-width: 768px) {
+    .popup-containerMamak {
+        width: 90vw !important;
+        padding: 1rem !important;
+        margin: 2rem auto !important;
+        border-radius: 8px !important;
+    }
+
+        .popup-containerMamak .close-btn {
+            top: 5px !important;
+            right: 10px !important;
+            font-size: 20px !important;
+        }
+
+    #btn-closed {
+        width: 100%;
+        font-size: 1rem;
+        padding: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .nav-tabs .nav-link,
+    .secondary-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    h4#popupTitle {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .popup-container {
+        width: 90vw !important;
+        padding: 1rem !important;
+        margin: 2rem auto !important;
+        border-radius: 8px !important;
+    }
+
+        .popup-container .close-btn {
+            top: 5px !important;
+            right: 10px !important;
+            font-size: 20px !important;
+        }
+
+    #btn-closed {
+        width: 100%;
+        font-size: 1rem;
+        padding: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .nav-tabs .nav-link,
+    .secondary-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    h4#popupTitle {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .offcanvas-start {
+        width: 80vw !important;
+    }
+}
+
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner-logo {
+    width: 100px;
+    height: 100px;
+    animation: spin 1s linear infinite;
+}
+
+.bb-scroll-area {
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin; /* Firefox */
+}
+
+    /* Chrome i√ßin ince kaydƒ±rma */
+    .bb-scroll-area::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+
+    .bb-scroll-area::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 4px;
+    }

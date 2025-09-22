@@ -1,700 +1,1075 @@
+const [
+    Map, SceneLayer, FeatureLayer, WebScene, SceneView, GraphicsLayer, SketchViewModel, Slider,
+    geodesicBufferOperator, Graphic, promiseUtils, Camera, LayerList, reactiveUtils, intl, Expand,
+    GeoJSONLayer, IntegratedMeshLayer, Field, Symbol, BuildingSceneLayer, Slice, SlicePlane, Collection,
+    BuildingExplorer, query, TopFeaturesQuery, CoordinateConversion, Format, Conversion, BasemapGallery,
+    DirectLineMeasurement3D, AreaMeasurement3D, ElevationProfile, Daylight, Weather, webMercatorUtils,
+    Bookmarks, Bookmark, Point, TileLayer, ElevationLayer, GroupLayer, Editor, Polygon, LabelClass,
+    config, WebTileLayer, ClassBreaksRenderer, LineOfSight, IntegratedMesh3DTilesLayer, SpatialReference,
+    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer
+] = await $arcgis.import([
+    "@arcgis/core/Map.js",
+    "@arcgis/core/layers/SceneLayer.js",
+    "@arcgis/core/layers/FeatureLayer.js",
+    "@arcgis/core/WebScene.js",
+    "@arcgis/core/views/SceneView.js",
+    "@arcgis/core/layers/GraphicsLayer.js",
+    "@arcgis/core/widgets/Sketch/SketchViewModel.js",
+    "@arcgis/core/widgets/Slider.js",
+    "@arcgis/core/geometry/operators/geodesicBufferOperator.js",
+    "@arcgis/core/Graphic.js",
+    "@arcgis/core/core/promiseUtils.js",
+    "@arcgis/core/Camera.js",
+    "@arcgis/core/widgets/LayerList.js",
+    "@arcgis/core/core/reactiveUtils.js",
+    "@arcgis/core/intl.js",
+    "@arcgis/core/widgets/Expand.js",
+    "@arcgis/core/layers/GeoJSONLayer.js",
+    "@arcgis/core/layers/IntegratedMeshLayer.js",
+    "@arcgis/core/layers/support/Field.js",
+    "@arcgis/core/symbols/Symbol.js",
+    "@arcgis/core/layers/BuildingSceneLayer.js",
+    "@arcgis/core/widgets/Slice.js",
+    "@arcgis/core/analysis/SlicePlane.js",
+    "@arcgis/core/core/Collection.js",
+    "@arcgis/core/widgets/BuildingExplorer.js",
+    "@arcgis/core/rest/query.js",
+    "@arcgis/core/rest/support/TopFeaturesQuery.js",
+    "@arcgis/core/widgets/CoordinateConversion.js",
+    "@arcgis/core/widgets/CoordinateConversion/support/Format.js",
+    "@arcgis/core/widgets/CoordinateConversion/support/Conversion.js",
+    "@arcgis/core/widgets/BasemapGallery.js",
+    "@arcgis/core/widgets/DirectLineMeasurement3D.js",
+    "@arcgis/core/widgets/AreaMeasurement3D.js",
+    "@arcgis/core/widgets/ElevationProfile.js",
+    "@arcgis/core/widgets/Daylight.js",
+    "@arcgis/core/widgets/Weather.js",
+    "@arcgis/core/geometry/support/webMercatorUtils.js",
+    "@arcgis/core/widgets/Bookmarks.js",
+    "@arcgis/core/webmap/Bookmark.js",
+    "@arcgis/core/geometry/Point.js",
+    "@arcgis/core/layers/TileLayer.js",
+    "@arcgis/core/layers/ElevationLayer.js",
+    "@arcgis/core/layers/GroupLayer.js",
+    "@arcgis/core/widgets/Editor.js",
+    "@arcgis/core/geometry/Polygon.js",
+    "@arcgis/core/layers/support/LabelClass.js",
+    "@arcgis/core/config.js",
+    "@arcgis/core/layers/WebTileLayer.js",
+    "@arcgis/core/renderers/ClassBreaksRenderer.js",
+    "@arcgis/core/widgets/LineOfSight.js",
+    "@arcgis/core/layers/IntegratedMesh3DTilesLayer.js",
+    "@arcgis/core/geometry/SpatialReference.js",
+    "@arcgis/core/geometry/operators/projectOperator.js",
+    "@arcgis/core/analysis/ViewshedAnalysis.js",
+    "@arcgis/core/analysis/Viewshed.js",
+    "@arcgis/core/layers/OrientedImageryLayer.js"
+]);
 
-require([
-    "esri/Map",
-    "esri/layers/SceneLayer",
-    "esri/layers/FeatureLayer",
-"esri/WebScene",
-"esri/views/SceneView",
-"esri/layers/GraphicsLayer",
-"esri/widgets/Sketch/SketchViewModel",
-"esri/widgets/Slider",
-"esri/geometry/operators/geodesicBufferOperator",
-"esri/Graphic",
-    "esri/core/promiseUtils",
-    "esri/Camera"
-], (Map, SceneLayer, FeatureLayer ,WebScene, SceneView, GraphicsLayer, SketchViewModel, Slider, geodesicBufferOperator, Graphic, promiseUtils, Camera) => {
-    // Load webscene and display it in a SceneView
 
-    initSliders();
+// Load webscene and display it in a SceneView
+let homeCamera;
+let activeWidget = null;
+let sceneLayerView;
+let sceneLayerViews = {};
+let sceneLayer;
+let highlightHandles = [];
 
-
-let ODTUScene = new SceneLayer({
-    url: "https://services3.arcgis.com/U6foQVCzh67NkRmC/arcgis/rest/services/IOD_multipatch_3857_/SceneServer"
-    //definitionExpression: "Type_Toit = 'plat' AND H_MAX <= 20"
+let ODTUScene = new WebScene({
+    portalItem: { id: "3adfc71e9e2a41cba7607b88046d6ecc" }
 });
-    let ODTUFeature = new FeatureLayer({
-        url: "https://services3.arcgis.com/U6foQVCzh67NkRmC/arcgis/rest/services/IOD_multipatch_3857_/FeatureServer/23"
-        //definitionExpression: "Type_Toit = 'plat' AND H_MAX <= 20"
-    });
 
-
-    
-// create the SceneView
 const view = new SceneView({
     container: "mapContainer",
-    map: new Map({
-        basemap: "topo-vector"
-    })
+    map: ODTUScene
 });
 window.view = view;
-// add a GraphicsLayer for the sketches and the buffer
-const sketchLayer = new GraphicsLayer();
-const bufferLayer = new GraphicsLayer();
-    view.map.addMany([ODTUScene,bufferLayer, sketchLayer]);
 
-let sceneLayer = ODTUScene;
-let sceneLayerView = null;
-let bufferSize = 0;
+view.when(() => {
+    $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
+    homeCamera = view.camera.clone();
+    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
 
-// Assign scene layer once webscene is loaded and initialize UI
-    //ODTUScene.load().then(() => {
-    //sceneLayer = ODTUScene.layers.find((layer) => {
-    //    return layer.title === "Heating System";
-    //});
-    //sceneLayer.outFields = ["Q_Heating_2050__kWh_m2_", "Q_Heating_20980__kWh_m2_"];
+    const layerNames = ["Uwall", "Uwindow", "Uroof", "Uground", "SHGC", "Infiltration Rate"];
 
-    view.whenLayerView(ODTUScene).then((layerView) => {
-        queryDiv.style.display = "block";
-        view.goTo(ODTUScene.fullExtent);
-    sceneLayerView = layerView;
-    if (geodesicBufferOperator.isLoaded()) {
-    }
+    layerNames.forEach(name => {
+        const layer = groupLayer.layers.find(l => l.title === name);
+        if (layer) { view.whenLayerView(layer).then(lv => { sceneLayerViews[name] = lv; }); }
     });
+
+    initSliders(groupLayer);
+});
+
+// --- Sliderlarýn min/max deðerlerini WebScene layer'larýndan al ---
+async function getFieldMinMax(layer, field) {
+    const query = layer.createQuery();
+    query.returnGeometry = false;
+    query.outStatistics = [
+        { onStatisticField: field, outStatisticFieldName: "minVal", statisticType: "min" },
+        { onStatisticField: field, outStatisticFieldName: "maxVal", statisticType: "max" }
+    ];
+    const result = await layer.queryFeatures(query);
+    if (!result.features || result.features.length === 0) {
+        //console.warn("Field bulunamadý veya feature yok:", field, "in layer:", layer.title);
+        return { min: 0, max: 2 };
+    }
+
+    const stats = result.features[0].attributes;
+    return { min: stats.minVal ?? 0, max: stats.maxVal ?? 2 };
+}
+
+// --- Sliderlarý baþlat ---
+async function initSliders(groupLayer) {
+    const sliders = [
+        { id: "#uwallSlider", field: "Uwall", layerName: "Uwall" },
+        { id: "#uwindowSlider", field: "Uwindow", layerName: "Uwindow" },
+        { id: "#uroofSlider", field: "Uroof", layerName: "Uroof" },
+        { id: "#ugroundSlider", field: "Uground", layerName: "Uground" },
+        { id: "#shgcSlider", field: "SHGC", layerName: "SHGC" },
+        { id: "#infiltrationSlider", field: "Infiltration", layerName: "Infiltration Rate" },
+
+        { id: "#grossFloorSlider", field: "Gross_Floor_Area", layerName: "Uwall" },
+        // ---- 2025 Sliders ----
+        { id: "#sliderQHeating2025", field: "F2025_BASE_Qheating", layerName: "Uwall" },
+        { id: "#sliderIOD2025", field: "F2025_BASE_IOD", layerName: "Uwall" },
+        { id: "#sliderEquipment2025", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
+        { id: "#sliderLighting2025", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
+        { id: "#sliderEmission2025", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
+
+        // ---- 2050 Sliders ----
+        { id: "#sliderQHeating2050", field: "F2050_BASE_Qheating", layerName: "Uwall" },
+        { id: "#sliderIOD2050", field: "F2050_BASE_IOD", layerName: "Uwall" },
+        { id: "#sliderEquipment2050", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
+        { id: "#sliderLighting2050", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
+        { id: "#sliderEmission2050", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
+
+    ];
+
+    for (let s of sliders) {
+        const layer = groupLayer.layers.find(l => l.title === s.layerName);
+        if (!layer) continue;
+
+        const { min, max } = await getFieldMinMax(layer, s.field);
+
+        $(s.id).ionRangeSlider({
+            type: "double",
+            grid: true,
+            min: min,
+            max: max,
+            from: min,
+            to: max,
+            step: 0.001,
+            skin: "flat",
+            prettify: function (num) {
+                return num.toFixed(3); // hep 3 basamak
+            },
+            onChange: filterScene
+        });
+    }
+}
+
+
+// --- Filtreleme ve WebScene üzerinde highlight ---
+async function filterScene() {
+    clearHighlighting();
+
+    const uwall = $("#uwallSlider").data("ionRangeSlider").result;
+    const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
+    const uroof = $("#uroofSlider").data("ionRangeSlider").result;
+    const uground = $("#ugroundSlider").data("ionRangeSlider").result;
+    const shgc = $("#shgcSlider").data("ionRangeSlider").result;
+    const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
+    //const grossfloorarea = $("#grossFloorSlider").data("ionRangeSlider").result;
+
+    // Tüm layerlardan filtrele ve highlight uygula
+    const filterPromises = Object.entries(sceneLayerViews).map(async ([name, lv]) => {
+        if (!lv) return [];
+
+        const layer = lv.layer;
+        const query = layer.createQuery();
+        query.returnGeometry = true;
+
+        query.where = `
+            Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
+            Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
+            Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
+            Uground >= ${uground.from} AND Uground <= ${uground.to} AND
+            SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
+            Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to}
+        `;
+        //Gross_Floor_Area >= ${ grossfloorarea.from } AND Gross_Floor_Area <= ${ grossfloorarea.to }
+
+
+        const result = await layer.queryFeatures(query);
+        if (!result.features || result.features.length === 0) return [];
+
+        const objectIds = result.features.map(f => f.attributes.OBJECTID);
+
+        const handle = lv.highlight(objectIds);
+        highlightHandles.push(handle);
+
+        return objectIds;
+    });
+
+    const allObjectIds = (await Promise.all(filterPromises)).flat();
+    console.log("Toplam highlight edilen OBJECTID sayýsý:", allObjectIds.length);
+}
+
+// --- Highlight temizleme ---
+function clearHighlighting() {
+    highlightHandles.forEach(h => {
+        try { h.remove(); } catch (e) { }
+    });
+    highlightHandles = [];
+}
+
+
+function createSymbol(color) {
+    return {
+        type: "mesh-3d",
+        symbolLayers: [{
+            type: "fill",
+            material: { color: color, transparency: 0 },//replace
+            edges: { type: "solid", color: [0, 0, 0, 0.5], size: 1, transparency: 60 }
+        }]
+    };
+}
+
+document.getElementById("btnScenario").addEventListener("click", function () {
+    var scenarioData = {
+        objectIdList: oidd,  // oidd burada daha önce tanýmlanmýþ olmalý
+        selectedYear: document.getElementById("yearDropdown").value,
+        function_: document.getElementById("functionSlider").value,
+        uwall: document.getElementById("uwallSlider").value,
+        uwindow: document.getElementById("uwindowSlider").value,
+        uroof: document.getElementById("uroofSlider").value,
+        uground: document.getElementById("ugroundSlider").value,
+        shgc: document.getElementById("shgcSlider").value,
+        infiltration: document.getElementById("infiltrationSlider").value,
+    };
+
+    //// varsa onceki senaryoyu al
+    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
+
+    if (storedScenarios.length >= 3) { // Eðer 3 senaryo varsa
+        storedScenarios.shift(); // En eski senaryoyu sil
+    }
+
+    storedScenarios.push(scenarioData);
+
+    localStorage.setItem("scenarios", JSON.stringify(storedScenarios));
+
+    // Toast mesajýný göster
+    let toast = new bootstrap.Toast(document.getElementById('successToast'));
+    toast.show();
+});
+
+///navbar butons
+function toolbarButton_onClick(e) {
+    if ($(e.currentTarget).hasClass("active")) {
+        if (activeWidget) {
+            activeWidget.destroy();
+            activeWidget = null;
+        }
+        $(e.currentTarget).removeClass("active")
+        parselSorgula = false;
+        bookmarksGoster = false;
+        return;
+
+    }
+    setActiveWidget($(e.currentTarget).attr("data-widget"));
+}
+function toggle_full_screen() {
+    if ((document.fullScreenElement && document.fullScreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
+        if (document.documentElement.requestFullScreen) {
+            document.documentElement.requestFullScreen();
+        }
+        else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+            document.documentElement.mozRequestFullScreen();
+        }
+        else if (document.documentElement.webkitRequestFullScreen) {   /* Chrome, Safari & Opera */
+            document.documentElement.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+        }
+        else if (document.msRequestFullscreen) { /* IE/Edge */
+            document.documentElement.msRequestFullscreen();
+        }
+    }
+    else {
+        if (document.cancelFullScreen) {
+            document.cancelFullScreen();
+        }
+        else if (document.mozCancelFullScreen) { /* Firefox */
+            document.mozCancelFullScreen();
+        }
+        else if (document.webkitCancelFullScreen) {   /* Chrome, Safari and Opera */
+            document.webkitCancelFullScreen();
+        }
+        else if (document.msExitFullscreen) { /* IE/Edge */
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function setActiveWidget(type) {
+    if (activeWidget) {
+        activeWidget.destroy();
+        activeWidget = null;
+    }
+    switch (type) {
+        case "home":
+            view.goTo(homeCamera);
+            setActiveButton(null);
+            break;
+
+        case "filtre":
+            //showFilter();
+            setActiveButton(document.getElementById("btnFiltre"));
+            break;
+        case "fullscreen":
+            toggle_full_screen();
+            break;
+        case "basemaps":
+            activeWidget = new BasemapGallery({
+                view: view,
+            });
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnBaseMaps"));
+            break;
+
+        case "distance":
+            activeWidget = new DirectLineMeasurement3D({
+                view: view
+            });
+
+            // skip the initial 'new measurement' button
+            activeWidget.viewModel.start().catch((error) => {
+                if (promiseUtils.isAbortError(error)) {
+                    return; // don't display abort errors
+                }
+                throw error; // throw other errors since they are of interest
+            });
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnMeasureLine"));
+            break;
+        case "area":
+            activeWidget = new AreaMeasurement3D({
+                view: view
+            });
+
+            // skip the initial 'new measurement' button
+            activeWidget.viewModel.start().catch((error) => {
+                if (promiseUtils.isAbortError(error)) {
+                    return; // don't display abort errors
+                }
+                throw error; // throw other errors since they are of interest
+            });
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnMeasurePoly"));
+            break;
+
+        case "lineofsight":
+            activeWidget = new LineOfSight({
+                view: view
+            });
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnLineOfSight"));
+            break;
+
+        case "profile":
+            activeWidget = new ElevationProfile({
+                view: view,
+                profiles: [{
+                    // displays elevation values from Map.ground
+                    type: "ground", //autocasts as new ElevationProfileLineGround()
+                    title: "Zemin"
+                }, {
+                    // displays elevation values from a SceneView
+                    type: "view", //autocasts as new ElevationProfileLineView()
+                    title: "Ekran"
+                }]
+            });
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnMeasureProfile"));
+            break;
+
+        case "daylight":
+            activeWidget = new Daylight({
+                view: view
+            });
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnDaylight"));
+            break;
+
+        case "layerlist":
+            activeWidget = new LayerList({
+                view: view
+            });
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnLayerList"));
+            break;
+
+        case "slice":
+            activeWidget = new Slice({
+                view: view
+            });
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("btnSlice"));
+            break;
+
+        case null:
+            if (activeWidget) {
+                view.ui.remove(activeWidget);
+                activeWidget.destroy();
+                activeWidget = null;
+            }
+            setActiveButton(null);
+            break;
+    }
+}
+function setActiveButton(selectedButton) {
+
+    view.focus();
+    const elements = document.getElementsByClassName("active");
+    for (let i = 0; i < elements.length; i++) {
+        elements[i].classList.remove("active");
+    }
+    if (selectedButton) {
+        selectedButton.classList.add("active");
+    }
+}
+
+
+//function initSliders() {
+//    //toolbar buttons
+//    $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
+
+//    view.whenLayerView(sceneLayer).then(layerView => {
+
+//        const sliders = [
+//            { id: "#uwallSlider", field: "Uwall" },
+//            { id: "#uwindowSlider", field: "Uwindow" },
+//            { id: "#uroofSlider", field: "Uroof" },
+//            { id: "#ugroundSlider", field: "Uground" },
+//            { id: "#shgcSlider", field: "SHGC" },
+//            { id: "#infiltrationSlider", field: "Infiltration" },
+//            // diðer sliderlar buraya...
+//        ];
+
+//        sliders.forEach(s => {
+//            // Layer'daki visualVariable
+//            const vv = sceneLayer.renderer.visualVariables?.find(vv => vv.field === s.field);
+//            const min = vv?.minSliderValue ?? 0;
+//            const max = vv?.maxSliderValue ?? 2;
+
+//            $(s.id).ionRangeSlider({
+//                type: "double",
+//                grid: true,
+//                min: min,
+//                max: max,
+//                from: min,
+//                to: max,
+//                step: 0.001,
+//                postfix: "m²",
+//                skin: "flat",
+//                onChange: data => filter2()
+//            });
+//        });
+
+//    });
+
+//    //$("#functionSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        //filter2();
+//    //    }
+//    //});
+//    //$("#uwallSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#uwindowSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#uroofSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#ugroundSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#shgcSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#infiltrationSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+//    //$("#grossFloorSlider").ionRangeSlider({
+//    //    type: "double ",
+//    //    grid: true,
+//    //    min: 0,
+//    //    max: 2,
+//    //    postfix: "m²",
+//    //    skin: "flat",
+//    //    step: 0.1,
+//    //    onChange: (data) => {
+//    //        filter2();
+//    //    }
+//    //});
+
+//    const sliderOptions = {
+//        type: "double",
+//        grid: true,
+//        min: 0,
+//        max: 2,
+//        postfix: "m²",
+//        skin: "flat",
+//        step: 0.1,
+//        onChange: (data) => {
+//            filter2();
+//        }
+//    };
+
+//    $("#sliderQHeating2025").ionRangeSlider(sliderOptions);
+//    $("#sliderIOD2025").ionRangeSlider(sliderOptions);
+//    $("#sliderEquipment2025").ionRangeSlider(sliderOptions);
+//    $("#sliderLighting2025").ionRangeSlider(sliderOptions);
+//    $("#sliderEmission2025").ionRangeSlider(sliderOptions);
+
+//    $("#sliderQHeating2050").ionRangeSlider(sliderOptions);
+//    $("#sliderIOD2050").ionRangeSlider(sliderOptions);
+//    $("#sliderEquipment2050").ionRangeSlider(sliderOptions);
+//    $("#sliderLighting2050").ionRangeSlider(sliderOptions);
+
+//}
+//createYearChart();
+//createMaterialChart();
+
+//let oidd;
+
+//async function filter2() {
+
+//    var functionslider = $("#functionSlider").data("ionRangeSlider");
+//    var uwallslider = $("#uwallSlider").data("ionRangeSlider");
+//    var uwindowslider = $("#uwindowSlider").data("ionRangeSlider");
+//    var uroofslider = $("#uroofSlider").data("ionRangeSlider");
+//    var ugroundslider = $("#ugroundSlider").data("ionRangeSlider");
+//    var sghcslider = $("#shgcSlider").data("ionRangeSlider");
+//    var infiltrationslider = $("#infiltrationSlider").data("ionRangeSlider");
+
+//    var sliderQHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider");
+//    var sliderIOD2025 = $("#sliderIOD2025").data("ionRangeSlider");
+//    var sliderEquipment2025 = $("#sliderEquipment2025").data("ionRangeSlider");
+//    var sliderLighting2025 = $("#sliderLighting2025").data("ionRangeSlider");
+//    var sliderEmission2025 = $("#sliderEmission2025").data("ionRangeSlider");
+
+//    var sliderQHeating2050 = $("#sliderQHeating2050").data("ionRangeSlider");
+//    var sliderIOD2050 = $("#sliderIOD2050").data("ionRangeSlider");
+//    var sliderEquipment2050 = $("#sliderEquipment2050").data("ionRangeSlider");
+//    var sliderLighting2050 = $("#sliderLighting2050").data("ionRangeSlider");
+
+
+//    var uwallMin = uwallslider.result.from;
+//    var uwallMax = uwallslider.result.to;
+//    var uwindowMin = uwindowslider.result.from;
+//    var uwindowMax = uwindowslider.result.to;
+//    var uroofMin = uroofslider.result.from;
+//    var uroofMax = uroofslider.result.to;
+//    var ugroundMin = ugroundslider.result.from;
+//    var ugroundMax = ugroundslider.result.to;
+//    var sghcMin = sghcslider.result.from;
+//    var sghcMax = sghcslider.result.to;
+//    var infiltrationMin = infiltrationslider.result.from;
+//    var infiltrationMax = infiltrationslider.result.to;
+
+//    var qHeating2025Min = sliderQHeating2025.result.from;
+//    var qHeating2025Max = sliderQHeating2025.result.to;
+
+//    var iod2025Min = sliderIOD2025.result.from;
+//    var iod2025Max = sliderIOD2025.result.to;
+
+//    var equipment2025Min = sliderEquipment2025.result.from;
+//    var equipment2025Max = sliderEquipment2025.result.to;
+
+//    var lighting2025Min = sliderLighting2025.result.from;
+//    var lighting2025Max = sliderLighting2025.result.to;
+
+//    var emission2025Min = sliderEmission2025.result.from;
+//    var emission2025Max = sliderEmission2025.result.to;
+
+//    var qHeating2050Min = sliderQHeating2050.result.from;
+//    var qHeating2050Max = sliderQHeating2050.result.to;
+
+//    var iod2050Min = sliderIOD2050.result.from;
+//    var iod2050Max = sliderIOD2050.result.to;
+
+//    var equipment2050Min = sliderEquipment2050.result.from;
+//    var equipment2050Max = sliderEquipment2050.result.to;
+
+//    var lighting2050Min = sliderLighting2050.result.from;
+//    var lighting2050Max = sliderLighting2050.result.to;
+
+
+//    const groupLayer = ODTUScene.layers.find(layer => layer.title === "Envelope Properties");
+//    if (!groupLayer) {
+//        console.error("GroupLayer bulunamadý!");
+//        return;
+//    }
+
+//    // Her alt katman için filtreleme ve highlight
+//    for (let layer of groupLayer.layers) {
+//        let fieldName = "";
+//        let whereClause = "";
+
+//        switch (layer.title) {
+//            case "Uwall":
+//                fieldName = "Uwall";
+//                whereClause = `(Uwall >= ${uwallMin} AND Uwall <= ${uwallMax})`;
+//                break;
+//            case "Uwindow":
+//                fieldName = "Uwindow";
+//                whereClause = `(Uwindow >= ${uwindowMin} AND Uwindow <= ${uwindowMax})`;
+//                break;
+//            case "Uroof":
+//                fieldName = "Uroof";
+//                whereClause = `(Uroof >= ${uroofMin} AND Uroof <= ${uroofMax})`;
+//                break;
+//            case "Uground":
+//                fieldName = "Uground";
+//                whereClause = `(Uground >= ${ugroundMin} AND Uground <= ${ugroundMax})`;
+//                break;
+//            case "SHGC":
+//                fieldName = "SHGC";
+//                whereClause = `(SHGC >= ${sghcMin} AND SHGC <= ${sghcMax})`;
+//                break;
+//            case "Infiltration Rate":
+//                fieldName = "Infiltration";
+//                whereClause = `(Infiltration >= ${infiltrationMin} AND Infiltration <= ${infiltrationMax})`;
+//                break;
+//            default:
+//                console.warn("Bu layer için filtre yok:", layer.title);
+//                continue;
+//        }
+
+//        try {
+//            const layerView = await view.whenLayerView(layer);
+
+//            // Debug: tüm deðerleri yazdýr
+//            const allFeatures = await layerView.queryFeatures({ where: "1=1", returnGeometry: false, outFields: [fieldName] });
+//            const values = allFeatures.features.map(f => f.attributes[fieldName]);
+//            console.log(layer.title, "tüm deðerler:", values);
+
+//            // ObjectId sorgula ve highlight et
+//            const objectIds = await layerView.queryObjectIds({ where: whereClause });
+//            console.log(layer.title, "objectIds:", objectIds);
+//            highlightBuildings(objectIds, layerView);
+
+//        } catch (error) {
+//            console.error("LayerView veya query hatasý:", layer.title, error);
+//        }
+//    }
+//}
+
+//function highlightBuildings(objectIds, layerView) {
+//    if (!sceneLayerView) return;
+//    const handle = sceneLayerView.highlight(objectIds);
+//    highlightHandles.push(handle);
+//}
+
+
+
+
+//// add a GraphicsLayer for the sketches and the buffer
+//const sketchLayer = new GraphicsLayer();
+//const bufferLayer = new GraphicsLayer();
+//view.map.addMany([ODTUScene, bufferLayer, sketchLayer]);
+
+//let sceneLayer = ODTUScene;
+//let sceneLayerView = null;
+//let bufferSize = 0;
+
+//view.whenLayerView(ODTUScene).then((layerView) => {
+//    queryDiv.style.display = "block";
+//    view.goTo(ODTUScene.fullExtent);
+//    sceneLayerView = layerView;
+//    if (geodesicBufferOperator.isLoaded()) {
+//    }
+//});
+////});
+
+//// Load the operator's dependencies
+//geodesicBufferOperator.load().then(() => {
+//    if (sceneLayerView) {
+//        queryDiv.style.display = "block";
+//    }
 //});
 
-// Load the operator's dependencies
-geodesicBufferOperator.load().then(() => {
-    if (sceneLayerView) {
-    queryDiv.style.display = "block";
-    }
-});
-
-view.ui.add([queryDiv], "bottom-left");
-view.ui.add([resultDiv], "top-right");
+//view.ui.add([queryDiv], "bottom-left");
+//view.ui.add([resultDiv], "top-right");
 
 // use SketchViewModel to draw polygons that are used as a query
-let sketchGeometry = null;
-const sketchViewModel = new SketchViewModel({
-    layer: sketchLayer,
-    defaultUpdateOptions: {
-    tool: "reshape",
-    toggleToolOnClick: false
-    },
-    view: view,
-    defaultCreateOptions: { hasZ: false }
-});
+//let sketchGeometry = null;
+//const sketchViewModel = new SketchViewModel({
+//    layer: sketchLayer,
+//    defaultUpdateOptions: {
+//        tool: "reshape",
+//        toggleToolOnClick: false
+//    },
+//    view: view,
+//    defaultCreateOptions: { hasZ: false }
+//});
 
-sketchViewModel.on("create", (event) => {
-    if (event.state === "complete") {
-    sketchGeometry = event.graphic.geometry;
-    runQuery();
-    }
-});
+//sketchViewModel.on("create", (event) => {
+//    if (event.state === "complete") {
+//        sketchGeometry = event.graphic.geometry;
+//        runQuery();
+//    }
+//});
 
-sketchViewModel.on("update", (event) => {
-    if (event.state === "complete") {
-    sketchGeometry = event.graphics[0].geometry;
-    runQuery();
-    }
-});
-// draw geometry buttons - use the selected geometry to sktech
-const pointBtn = document.getElementById("point-geometry-button");
-const lineBtn = document.getElementById("line-geometry-button");
-const polygonBtn = document.getElementById("polygon-geometry-button");
-pointBtn.addEventListener("click", geometryButtonsClickHandler);
-lineBtn.addEventListener("click", geometryButtonsClickHandler);
-polygonBtn.addEventListener("click", geometryButtonsClickHandler);
-function geometryButtonsClickHandler(event) {
-    const geometryType = event.target.value;
-    clearGeometry();
-    sketchViewModel.create(geometryType);
-}
+//sketchViewModel.on("update", (event) => {
+//    if (event.state === "complete") {
+//        sketchGeometry = event.graphics[0].geometry;
+//        runQuery();
+//    }
+//});
+//// draw geometry buttons - use the selected geometry to sktech
+//const pointBtn = document.getElementById("point-geometry-button");
+//const lineBtn = document.getElementById("line-geometry-button");
+//const polygonBtn = document.getElementById("polygon-geometry-button");
+//pointBtn.addEventListener("click", geometryButtonsClickHandler);
+//lineBtn.addEventListener("click", geometryButtonsClickHandler);
+//polygonBtn.addEventListener("click", geometryButtonsClickHandler);
+//function geometryButtonsClickHandler(event) {
+//    const geometryType = event.target.value;
+//    clearGeometry();
+//    sketchViewModel.create(geometryType);
+//}
 
-const bufferNumSlider = new Slider({
-    container: "bufferNum",
-    min: 0,
-    max: 500,
-    steps: 1,
-    visibleElements: {
-    labels: true
-    },
-    precision: 0,
-    labelFormatFunction: (value, type) => {
-    return `${value.toString()}m`;
-    },
-    values: [0]
-});
-// get user entered values for buffer
-bufferNumSlider.on(["thumb-change", "thumb-drag"], bufferVariablesChanged);
-function bufferVariablesChanged(event) {
-    bufferSize = event.value;
-    runQuery();
-}
-// Clear the geometry and set the default renderer
-const clearGeometryBtn = document.getElementById("clearGeometry");
-clearGeometryBtn.addEventListener("click", clearGeometry);
+//const bufferNumSlider = new Slider({
+//    container: "bufferNum",
+//    min: 0,
+//    max: 500,
+//    steps: 1,
+//    visibleElements: {
+//        labels: true
+//    },
+//    precision: 0,
+//    labelFormatFunction: (value, type) => {
+//        return `${value.toString()}m`;
+//    },
+//    values: [0]
+//});
+//// get user entered values for buffer
+//bufferNumSlider.on(["thumb-change", "thumb-drag"], bufferVariablesChanged);
+//function bufferVariablesChanged(event) {
+//    bufferSize = event.value;
+//    runQuery();
+//}
+//// Clear the geometry and set the default renderer
+//const clearGeometryBtn = document.getElementById("clearGeometry");
+//clearGeometryBtn.addEventListener("click", clearGeometry);
 
-// Clear the geometry and set the default renderer
-function clearGeometry() {
-    sketchGeometry = null;
-    sketchViewModel.cancel();
-    sketchLayer.removeAll();
-    bufferLayer.removeAll();
-    clearHighlighting();
-    clearCharts();
-    resultDiv.style.display = "none";
-}
+//// Clear the geometry and set the default renderer
+//function clearGeometry() {
+//    sketchGeometry = null;
+//    sketchViewModel.cancel();
+//    sketchLayer.removeAll();
+//    bufferLayer.removeAll();
+//    clearHighlighting();
+//    clearCharts();
+//    resultDiv.style.display = "none";
+//}
 
-// set the geometry query on the visible SceneLayerView
-const debouncedRunQuery = promiseUtils.debounce(() => {
-    if (!sketchGeometry) {
-    return;
-    }
+//// set the geometry query on the visible SceneLayerView
+//const debouncedRunQuery = promiseUtils.debounce(() => {
+//    if (!sketchGeometry) {
+//        return;
+//    }
 
-    resultDiv.style.display = "block";
-    updateBufferGraphic(bufferSize);
-    return promiseUtils.eachAlways([queryStatistics(), updateSceneLayer()]);
-});
+//    resultDiv.style.display = "block";
+//    updateBufferGraphic(bufferSize);
+//    return promiseUtils.eachAlways([queryStatistics(), updateSceneLayer()]);
+//});
 
-function runQuery() {
-    debouncedRunQuery().catch((error) => {
-    if (error.name === "AbortError") {
-        return;
-    }
+//function runQuery() {
+//    debouncedRunQuery().catch((error) => {
+//        if (error.name === "AbortError") {
+//            return;
+//        }
 
-    console.error(error);
-    });
-}
-
-// Set the renderer with objectIds
-let highlightHandle = null;
-function clearHighlighting() {
-    if (highlightHandle) {
-    highlightHandle.remove();
-    highlightHandle = null;
-    }
-}
-
-function highlightBuildings(objectIds) {
-    // Remove any previous highlighting
-    clearHighlighting();
-    const objectIdField = sceneLayer.objectIdField;
-    document.getElementById("count").innerHTML = objectIds.length;
-
-    highlightHandle = sceneLayerView.highlight(objectIds);
-}
-
-// update the graphic with buffer
-function updateBufferGraphic(buffer) {
-    // add a polygon graphic for the buffer
-    if (buffer > 0) {
-    const bufferGeometry = geodesicBufferOperator.execute(
-        sketchGeometry,
-        buffer,
-        { unit: "meters" }
-    );
-    if (bufferLayer.graphics.length === 0) {
-        bufferLayer.add(
-        new Graphic({
-            geometry: bufferGeometry,
-            symbol: sketchViewModel.polygonSymbol
-        })
-        );
-    } else {
-        bufferLayer.graphics.getItemAt(0).geometry = bufferGeometry;
-    }
-    } else {
-    bufferLayer.removeAll();
-    }
-}
-
-function updateSceneLayer() {
-    const query = sceneLayerView.createQuery();
-    query.geometry = sketchGeometry;
-    query.distance = bufferSize;
-    return sceneLayerView.queryObjectIds(query).then(highlightBuildings);
-}
-
-let yearChart = null;
-let materialChart = null;
-
-function queryStatistics() {
-    const statDefinitions = [
-        {
-            onStatisticField: "OBJECTID",
-            outStatisticFieldName: "test1",
-            statisticType: "sum"
-        },
-        {
-            onStatisticField: "OBJECTID",
-            outStatisticFieldName: "test2",
-            statisticType: "sum"
-        },
-        {
-            onStatisticField: "Uroof",
-            outStatisticFieldName: "test3",
-            statisticType: "sum"
-        }
-    //{
-    //    onStatisticField: "CASE WHEN buildingMaterial = 'wood' THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "material_wood",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN buildingMaterial = 'steel' THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "material_steel",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField:
-    //    "CASE WHEN buildingMaterial IN ('concrete or lightweight concrete', 'brick', 'wood', 'steel') THEN 0 ELSE 1 END",
-    //    outStatisticFieldName: "material_other",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '1850' AND yearCompleted <= '1899') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_1850",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '1900' AND yearCompleted <= '1924') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_1900",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '1925' AND yearCompleted <= '1949') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_1925",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '1950' AND yearCompleted <= '1974') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_1950",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '1975' AND yearCompleted <= '1999') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_1975",
-    //    statisticType: "sum"
-    //},
-    //{
-    //    onStatisticField: "CASE WHEN (yearCompleted >= '2000' AND yearCompleted <= '2015') THEN 1 ELSE 0 END",
-    //    outStatisticFieldName: "year_2000",
-    //    statisticType: "sum"
-            //
-    ];
-    const query = sceneLayerView.createQuery();
-    query.geometry = sketchGeometry;
-    query.distance = bufferSize;
-    query.outStatistics = statDefinitions;
-
-    return sceneLayerView.queryFeatures(query).then((result) => {
-    const allStats = result.features[0].attributes;
-    updateChart(materialChart, [
-        30,
-        40,
-        50,
-        //allStats.material_steel,
-        //allStats.material_other
-    ]);
-    updateChart(yearChart, [
-        30,
-        40,
-        50,
-        //allStats.year_1950,
-        //allStats.year_1975,
-        //allStats.year_2000
-    ]);
-    }, console.error);
-}
-
-// Updates the given chart with new data
-function updateChart(chart, dataValues) {
-    chart.data.datasets[0].data = dataValues;
-    chart.update();
-}
-
-function createYearChart() {
-    const yearCanvas = document.getElementById("year-chart");
-    yearChart = new Chart(yearCanvas.getContext("2d"), {
-    type: "horizontalBar",
-    data: {
-        labels: ["2020", "2050", "2080"],
-        datasets: [
-        {
-            label: "Build year",
-            backgroundColor: "#149dcf",
-            stack: "Stack 0",
-            data: [0, 0, 0]
-        }
-        ]
-    },
-    options: {
-        responsive: false,
-        legend: {
-        display: false
-        },
-        title: {
-        display: true,
-        text: "Year"
-        },
-        scales: {
-        xAxes: [
-            {
-            stacked: true,
-            ticks: {
-                beginAtZero: true,
-                precision: 0
-            }
-            }
-        ],
-        yAxes: [
-            {
-            stacked: true
-            }
-        ]
-        }
-    }
-    });
-}
-function createMaterialChart() {
-    const materialCanvas = document.getElementById("material-chart");
-    materialChart = new Chart(materialCanvas.getContext("2d"), {
-    type: "doughnut",
-    data: {
-        labels: ["2020", "2050", "2080"],
-        datasets: [
-        {
-            backgroundColor: ["#FD7F6F", "#7EB0D5", "#B2E061"],
-            borderWidth: 0,
-            data: [0, 0, 0]
-        }
-        ]
-    },
-    options: {
-        responsive: false,
-        cutoutPercentage: 35,
-        legend: {
-        position: "bottom"
-        },
-        title: {
-        display: true,
-        text: "Building Material"
-        }
-    }
-    });
-}
-
-function clearCharts() {
-    updateChart(materialChart, [0, 0, 0, 0, 0]);
-    updateChart(yearChart, [0, 0, 0, 0, 0, 0]);
-    document.getElementById("count").innerHTML = 0;
-}
-    function initSliders() {
-
-        $("#functionSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                //filter2();
-            }
-        });
-        $("#uwallSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-        $("#uwindowSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-        $("#uroofSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-        $("#ugroundSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-        $("#shgcSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-        $("#infiltrationSlider").ionRangeSlider({
-            type: "double ",
-            grid: true,
-            min: 0,
-            max: 2,
-            postfix: "m²",
-            skin: "flat",
-            step: 0.1,
-            onChange: (data) => {
-                filter2();
-            }
-        });
-
-    }
-createYearChart();
-    createMaterialChart();
-
-    let oidd;
-    function filter2() {
-
-        var v = $('#ddlLayer').val();
-        var f1 = $('#filter2Height').is(':checked');
-        var f2 = $('#filter2Area').is(':checked');
-
-        var functionslider = $("#functionSlider").data("ionRangeSlider");
-        var uwallslider = $("#uwallSlider").data("ionRangeSlider");
-        var uwindowslider = $("#uwindowSlider").data("ionRangeSlider");
-        var uroofslider = $("#uroofSlider").data("ionRangeSlider");
-        var ugroundslider = $("#ugroundSlider").data("ionRangeSlider");
-        var sghcslider = $("#ugroundSlider").data("ionRangeSlider");
-        var infiltrationslider = $("#infiltrationSlider").data("ionRangeSlider");
-
-        var functionMin = functionslider.result.from;
-        var functionMax = functionslider.result.to;
-        var uwallMin = uwallslider.result.from;
-        var uwallMax = uwallslider.result.to;
-        var uwindowMin = uwindowslider.result.from;
-        var uwindowMax = uwindowslider.result.to;
-        var uroofMin = uroofslider.result.from;
-        var uroofMax = uroofslider.result.to;
-        var ugroundMin = ugroundslider.result.from;
-        var ugroundMax = ugroundslider.result.to;
-        var sghcMin = sghcslider.result.from;
-        var sghcMax = sghcslider.result.to;
-        var infiltrationMin = infiltrationslider.result.from;
-        var infiltrationMax = infiltrationslider.result.to;
-
-        var query = [];
-        var query2 = [];
-        //if (1) {
-        //    query.push(`(Height>=${functionMin} and Height<=${functionMax})`);
-        //    query2.push(`($feature.Height>=${functionMin} && $feature.Height<=${functionMax})`);
-        //}
-        if (1) {
-            query.push(`(Uwall >=${uwallMin} AND Uwall <=${uwallMax})`);
-            query2.push(`($feature.Uwall >=${uwallMin} && $feature.Uwall <=${uwallMax})`);
-        }
-        if (1) {
-            query.push(`(Uwindow >=${uwindowMin} AND Uwindow <=${uwindowMax})`);
-            query2.push(`($feature.Uwindow >=${uwindowMin} && $feature.Uwindow <=${uwindowMax})`);
-        }
-        if (1) {
-            query.push(`(Uroof >=${uroofMin} AND Uroof <=${uroofMax})`);
-            query2.push(`($feature.Uroof >=${uroofMin} && $feature.Uroof <=${uroofMax})`);
-        }
-        if (1) {
-            query.push(`(Uground >=${ugroundMin} AND Uground <=${ugroundMax})`);
-            query2.push(`($feature.Uground >=${ugroundMin} && $feature.Uground <=${ugroundMax})`);
-        }
-        if (1) {
-            query.push(`(SHGC >=${sghcMin} AND SHGC <=${sghcMax})`);
-            query2.push(`($feature.SHGC >=${sghcMin} && $feature.SHGC <=${sghcMax})`);
-        }
-        if (1) {
-            query.push(`(Infiltration >=${infiltrationMin} AND Infiltration <=${infiltrationMax})`);
-            query2.push(`($feature.Infiltration>=${infiltrationMin} && $feature.Infiltration <=${infiltrationMax})`);
-        }
-        clearHighlighting();
-
-
-        sceneLayer.load().then(() => {
-            console.log("Available Fields:", sceneLayer.fields.map(f => f.name));
-        });
-        sceneLayer.fields.forEach(f => {
-            console.log(`Field: ${f.name}, Type: ${f.type}`);
-        });
-        
-        let whereClause = query.join(" AND ");
-        //sceneLayerView.queryObjectIds(whereClause).then(highlightBuildings);
-        console.log("Object ID Field:", sceneLayer.objectIdField);
-        console.log("Supports Querying?", sceneLayer.capabilities?.query?.supportsStatistics);
-
-        console.log(`Uwall >= ${ uwallMin } AND Uwall <= ${ uwallMax })
-        AND(Uwindow >= ${ uwindowMin } AND Uwindow <= ${ uwindowMax })
-        AND(Uroof >= ${ uroofMin } AND Uroof <= ${ uroofMax })
-        AND(Uground >= ${ ugroundMin } AND Uground <= ${ ugroundMax })
-        AND(SHGC >= ${ sghcMin } AND SHGC <= ${ sghcMax })
-        AND(Infiltration >= ${ infiltrationMin } AND Infiltration <= ${ infiltrationMax })`);
-        sceneLayerView.queryObjectIds({
-            where: `(Uwall >= ${uwallMin} AND Uwall <= ${uwallMax}) 
-            AND (Uwindow >= ${uwindowMin} AND Uwindow <= ${uwindowMax}) 
-            AND (Uroof >= ${uroofMin} AND Uroof <= ${uroofMax}) 
-            AND (Uground >= ${ugroundMin} AND Uground <= ${ugroundMax}) 
-            AND (SHGC >= ${sghcMin} AND SHGC <= ${sghcMax}) 
-            AND (Infiltration >= ${infiltrationMin} AND Infiltration <= ${infiltrationMax})`
-
-
-        }).then((result) => {
-            //let objectIds = result.features.map(feature => feature.attributes.OBJECTID);
-            console.log(result);
-            oidd = result;
-            highlightBuildings(result); 
-
-        });
-        //sceneLayer.featureEffect = {
-        //    filter: {
-        //        where: whereClause
-        //    },
-        //    includedEffect: "bloom(2, 0.5px, 0.2)", // Bright effect for highlights
-        //    excludedEffect: "grayscale(100%) opacity(30%)" // Dim non-matching features
-        //};
-
-        //var block = $('#filter2Block').val();
-        //var parcel = $('#filter2Parcel').val();
-        //var buildingType = $('#ddlBuildingType').val();
-
-        //if (block) {
-        //    query.push(`blockNumber='${block}'`);
-        //    query2.push(`$feature.blockNumber=='${block}'`);
-        //}
-        //if (parcel) {
-        //    query.push(`parcelNumber='${parcel}'`);
-        //    query2.push(`$feature.parcelNumber=='${parcel}'`);
-        //}
-        //if (buildingType != "0") {
-
-        //    query2.push(`$feature.buildingType=='${buildingType}'`);
-
-        //}
-
-        //if (query.length > 0)
-        //    buildings2.definitionExpression = query.join(" and ");
-        //else
-        //    buildings2.definitionExpression = "";
-
-        if (query2.length > 0) {
-
-            var arcade = "When(" + query2.join(" && ") + ")";
-            //sceneLayerView.queryObjectIds(arcade).then(highlightBuildings);
-            console.log(arcade);
-            let renderer = {
-                type: "unique-value",
-                valueExpression: arcade, //"When($feature.count < 20, 'low', $feature.count >= 20 && $feature.count < 70, 'moderate', $feature.count >=70, 'high', 'other')",
-                uniqueValueInfos: [
-                    {
-                        value: "secili",
-                        symbol: createSymbol("#1fcf1f"),
-                        label: "Seçili"
-                    },
-                    {
-                        value: "diger",
-                        symbol: createSymbol("#bab6b6"),
-                        label: "Di?er"
-                    },
-
-                ],  // assigns symbols to features evaluating to 'low', 'moderate', or 'high'
-            };
-            ODTUScene.renderer = renderer;
-            //if (v == "1")
-            //    buildings.renderer = renderer;
-            //else
-            //    buildings2.renderer = renderer;
-
-
-        }
-        else {
-            //if (v == "1")
-            //    buildings.renderer = null;
-            //else
-            //    buildings2.renderer = null;
-
-        }
-
-
-    }
-    function createSymbol(color) {
-        return {
-            type: "mesh-3d",
-            symbolLayers: [{
-                type: "fill",
-                material: { color: color, transparency: 0 },//replace
-                edges: { type: "solid", color: [0, 0, 0, 0.5], size: 1, transparency: 60 }
-            }]
-        };
-    }
-
-    
-
-    document.getElementById("btnScenario").addEventListener("click", function () {
-        var scenarioData = {
-            objectIdList: oidd,  // oidd burada daha önce tanýmlanmýþ olmalý
-            selectedYear: document.getElementById("yearDropdown").value,
-            function_: document.getElementById("functionSlider").value,
-            uwall: document.getElementById("uwallSlider").value,
-            uwindow: document.getElementById("uwindowSlider").value,
-            uroof: document.getElementById("uroofSlider").value,
-            uground: document.getElementById("ugroundSlider").value,
-            shgc: document.getElementById("shgcSlider").value,
-            infiltration: document.getElementById("infiltrationSlider").value,
-        };
-
-        //// varsa onceki senaryoyu al
-        let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
-
-        if (storedScenarios.length >= 3) { // Eðer 3 senaryo varsa
-            storedScenarios.shift(); // En eski senaryoyu sil
-        }
-
-        storedScenarios.push(scenarioData);
-
-        localStorage.setItem("scenarios", JSON.stringify(storedScenarios));
-
-        // Toast mesajýný göster
-        let toast = new bootstrap.Toast(document.getElementById('successToast'));
-        toast.show(); 
-    });
-   
+//        console.error(error);
+//    });
+//}
 
 
 
-});
 
 
+//// update the graphic with buffer
+//function updateBufferGraphic(buffer) {
+//    // add a polygon graphic for the buffer
+//    if (buffer > 0) {
+//        const bufferGeometry = geodesicBufferOperator.execute(
+//            sketchGeometry,
+//            buffer,
+//            { unit: "meters" }
+//        );
+//        if (bufferLayer.graphics.length === 0) {
+//            bufferLayer.add(
+//                new Graphic({
+//                    geometry: bufferGeometry,
+//                    symbol: sketchViewModel.polygonSymbol
+//                })
+//            );
+//        } else {
+//            bufferLayer.graphics.getItemAt(0).geometry = bufferGeometry;
+//        }
+//    } else {
+//        bufferLayer.removeAll();
+//    }
+//}
+
+//function updateSceneLayer() {
+//    const query = sceneLayerView.createQuery();
+//    query.geometry = sketchGeometry;
+//    query.distance = bufferSize;
+//    return sceneLayerView.queryObjectIds(query).then(highlightBuildings);
+//}
+
+//let yearChart = null;
+//let materialChart = null;
+
+//function queryStatistics() {
+//    const statDefinitions = [
+//        {
+//            onStatisticField: "OBJECTID",
+//            outStatisticFieldName: "test1",
+//            statisticType: "sum"
+//        },
+//        {
+//            onStatisticField: "OBJECTID",
+//            outStatisticFieldName: "test2",
+//            statisticType: "sum"
+//        },
+//        {
+//            onStatisticField: "Uroof",
+//            outStatisticFieldName: "test3",
+//            statisticType: "sum"
+//        }
+//        //{
+//        //    onStatisticField: "CASE WHEN buildingMaterial = 'wood' THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "material_wood",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN buildingMaterial = 'steel' THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "material_steel",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField:
+//        //    "CASE WHEN buildingMaterial IN ('concrete or lightweight concrete', 'brick', 'wood', 'steel') THEN 0 ELSE 1 END",
+//        //    outStatisticFieldName: "material_other",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '1850' AND yearCompleted <= '1899') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_1850",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '1900' AND yearCompleted <= '1924') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_1900",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '1925' AND yearCompleted <= '1949') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_1925",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '1950' AND yearCompleted <= '1974') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_1950",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '1975' AND yearCompleted <= '1999') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_1975",
+//        //    statisticType: "sum"
+//        //},
+//        //{
+//        //    onStatisticField: "CASE WHEN (yearCompleted >= '2000' AND yearCompleted <= '2015') THEN 1 ELSE 0 END",
+//        //    outStatisticFieldName: "year_2000",
+//        //    statisticType: "sum"
+//        //
+//    ];
+//    const query = sceneLayerView.createQuery();
+//    query.geometry = sketchGeometry;
+//    query.distance = bufferSize;
+//    query.outStatistics = statDefinitions;
+
+//    return sceneLayerView.queryFeatures(query).then((result) => {
+//        const allStats = result.features[0].attributes;
+//        updateChart(materialChart, [
+//            30,
+//            40,
+//            50,
+//            //allStats.material_steel,
+//            //allStats.material_other
+//        ]);
+//        updateChart(yearChart, [
+//            30,
+//            40,
+//            50,
+//            //allStats.year_1950,
+//            //allStats.year_1975,
+//            //allStats.year_2000
+//        ]);
+//    }, console.error);
+//}
+
+//// Updates the given chart with new data
+//function updateChart(chart, dataValues) {
+//    chart.data.datasets[0].data = dataValues;
+//    chart.update();
+//}
+
+//function createYearChart() {
+//    const yearCanvas = document.getElementById("year-chart");
+//    yearChart = new Chart(yearCanvas.getContext("2d"), {
+//        type: "horizontalBar",
+//        data: {
+//            labels: ["2020", "2050", "2080"],
+//            datasets: [
+//                {
+//                    label: "Build year",
+//                    backgroundColor: "#149dcf",
+//                    stack: "Stack 0",
+//                    data: [0, 0, 0]
+//                }
+//            ]
+//        },
+//        options: {
+//            responsive: false,
+//            legend: {
+//                display: false
+//            },
+//            title: {
+//                display: true,
+//                text: "Year"
+//            },
+//            scales: {
+//                xAxes: [
+//                    {
+//                        stacked: true,
+//                        ticks: {
+//                            beginAtZero: true,
+//                            precision: 0
+//                        }
+//                    }
+//                ],
+//                yAxes: [
+//                    {
+//                        stacked: true
+//                    }
+//                ]
+//            }
+//        }
+//    });
+//}
+//function createMaterialChart() {
+//    const materialCanvas = document.getElementById("material-chart");
+//    materialChart = new Chart(materialCanvas.getContext("2d"), {
+//        type: "doughnut",
+//        data: {
+//            labels: ["2020", "2050", "2080"],
+//            datasets: [
+//                {
+//                    backgroundColor: ["#FD7F6F", "#7EB0D5", "#B2E061"],
+//                    borderWidth: 0,
+//                    data: [0, 0, 0]
+//                }
+//            ]
+//        },
+//        options: {
+//            responsive: false,
+//            cutoutPercentage: 35,
+//            legend: {
+//                position: "bottom"
+//            },
+//            title: {
+//                display: true,
+//                text: "Building Material"
+//            }
+//        }
+//    });
+//}
+
+//function clearCharts() {
+//    updateChart(materialChart, [0, 0, 0, 0, 0]);
+//    updateChart(yearChart, [0, 0, 0, 0, 0, 0]);
+//    document.getElementById("count").innerHTML = 0;
+//}
 
 
