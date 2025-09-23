@@ -99,7 +99,6 @@ view.when(() => {
 
     initSliders(groupLayer);
 });
-
 // --- Sliderlarýn min/max deðerlerini WebScene layer'larýndan al ---
 async function getFieldMinMax(layer, field) {
     const query = layer.createQuery();
@@ -117,7 +116,6 @@ async function getFieldMinMax(layer, field) {
     const stats = result.features[0].attributes;
     return { min: stats.minVal ?? 0, max: stats.maxVal ?? 2 };
 }
-
 // --- Sliderlarý baþlat ---
 async function initSliders(groupLayer) {
     const sliders = [
@@ -131,14 +129,12 @@ async function initSliders(groupLayer) {
         { id: "#grossFloorSlider", field: "Gross_Floor_Area", layerName: "Uwall" },
         // ---- 2025 Sliders ----
         { id: "#sliderQHeating2025", field: "F2025_BASE_Qheating", layerName: "Uwall" },
-        { id: "#sliderIOD2025", field: "F2025_BASE_IOD", layerName: "Uwall" },
         { id: "#sliderEquipment2025", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
         { id: "#sliderLighting2025", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
         { id: "#sliderEmission2025", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
 
         // ---- 2050 Sliders ----
         { id: "#sliderQHeating2050", field: "F2050_BASE_Qheating", layerName: "Uwall" },
-        { id: "#sliderIOD2050", field: "F2050_BASE_IOD", layerName: "Uwall" },
         { id: "#sliderEquipment2050", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
         { id: "#sliderLighting2050", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
         { id: "#sliderEmission2050", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
@@ -166,9 +162,33 @@ async function initSliders(groupLayer) {
             onChange: filterScene
         });
     }
+
+    const iodValues = [
+        "office_no_iod",
+        "0.65",
+        "0.44",
+        "0.5",
+        "0.55",
+        "0.43",
+        "0.51",
+        "0.41",
+        "0.47",
+        "0.45"
+    ];
+
+    $("#sliderIOD2025 , #sliderIOD2050").ionRangeSlider({
+        values: iodValues,
+        grid: true,
+        onFinish: function (data) {
+            const selected = data.from_value;
+            filterScene({
+                field: "F2025_BASE_IOD",
+                value: selected,
+                layerName: "Uwall"
+            });
+        }
+    });
 }
-
-
 // --- Filtreleme ve WebScene üzerinde highlight ---
 async function filterScene() {
     clearHighlighting();
@@ -214,7 +234,6 @@ async function filterScene() {
     const allObjectIds = (await Promise.all(filterPromises)).flat();
     console.log("Toplam highlight edilen OBJECTID sayýsý:", allObjectIds.length);
 }
-
 // --- Highlight temizleme ---
 function clearHighlighting() {
     highlightHandles.forEach(h => {
@@ -223,17 +242,39 @@ function clearHighlighting() {
     highlightHandles = [];
 }
 
+$("#btnFilterClear").on("click", function () {
+    clearHighlighting();
 
-function createSymbol(color) {
-    return {
-        type: "mesh-3d",
-        symbolLayers: [{
-            type: "fill",
-            material: { color: color, transparency: 0 },//replace
-            edges: { type: "solid", color: [0, 0, 0, 0.5], size: 1, transparency: 60 }
-        }]
-    };
-}
+    // Tüm sliderlarý resetle
+    const sliders = [
+        "#uwallSlider",
+        "#uwindowSlider",
+        "#uroofSlider",
+        "#ugroundSlider",
+        "#shgcSlider",
+        "#infiltrationSlider",
+        "#grossFloorSlider",
+        "#sliderQHeating2025",
+        "#sliderEquipment2025",
+        "#sliderLighting2025",
+        "#sliderEmission2025",
+        "#sliderQHeating2050",
+        "#sliderEquipment2050",
+        "#sliderLighting2050",
+        "#sliderEmission2050",
+        "#sliderIOD2025",
+        "#sliderIOD2050"
+    ];
+
+    sliders.forEach(id => {
+        const slider = $(id).data("ionRangeSlider");
+        if (slider) slider.reset();
+    });
+});
+
+$("#btnScenario").on("click", function () {
+    window.location.href = "/Home/Scenario";
+});
 
 document.getElementById("btnScenario").addEventListener("click", function () {
     var scenarioData = {
@@ -263,8 +304,6 @@ document.getElementById("btnScenario").addEventListener("click", function () {
     let toast = new bootstrap.Toast(document.getElementById('successToast'));
     toast.show();
 });
-
-///navbar butons
 function toolbarButton_onClick(e) {
     if ($(e.currentTarget).hasClass("active")) {
         if (activeWidget) {
@@ -309,7 +348,6 @@ function toggle_full_screen() {
         }
     }
 }
-
 function setActiveWidget(type) {
     if (activeWidget) {
         activeWidget.destroy();
@@ -442,6 +480,23 @@ function setActiveButton(selectedButton) {
     }
 }
 
+const yearDropdown = document.getElementById("yearDropdown");
+function updateYearContent() {
+    const selectedYear = yearDropdown.value;
+
+    document.getElementById("content2025").classList.add("d-none");
+    document.getElementById("content2050").classList.add("d-none");
+
+    const contentEl = document.getElementById("content" + selectedYear);
+    if (contentEl) contentEl.classList.remove("d-none");
+}
+
+// Event binding
+if (yearDropdown) {
+    yearDropdown.addEventListener("change", updateYearContent);
+    // açýlýþta bir kere çalýþtýr
+    updateYearContent();
+}
 
 //function initSliders() {
 //    //toolbar buttons
