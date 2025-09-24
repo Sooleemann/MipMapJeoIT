@@ -74,6 +74,7 @@ let sceneLayerView;
 let sceneLayerViews = {};
 let sceneLayer;
 let highlightHandles = [];
+let sliderDefaults = {};
 
 let ODTUScene = new WebScene({
     portalItem: { id: "3adfc71e9e2a41cba7607b88046d6ecc" }
@@ -84,6 +85,14 @@ const view = new SceneView({
     map: ODTUScene
 });
 window.view = view;
+
+const layerList = new LayerList({
+    view: view
+});
+// Adds widget below other elements in the top left corner of the view
+view.ui.add(layerList, {
+    position: "top-left"
+});
 
 view.when(() => {
     $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
@@ -159,7 +168,7 @@ async function initSliders(groupLayer) {
             prettify: function (num) {
                 return num.toFixed(3); // hep 3 basamak
             },
-            onChange: filterScene
+            onFinish: filterScene
         });
     }
 
@@ -190,6 +199,16 @@ async function initSliders(groupLayer) {
     });
 }
 // --- Filtreleme ve WebScene üzerinde highlight ---
+// --- Highlight temizleme ---
+
+// Filtreyi temizle
+function clearHighlighting() {
+    highlightHandles.forEach(h => {
+        try { h.remove(); } catch (e) { }
+    });
+    highlightHandles = [];
+}
+
 async function filterScene() {
     clearHighlighting();
 
@@ -234,18 +253,11 @@ async function filterScene() {
     const allObjectIds = (await Promise.all(filterPromises)).flat();
     console.log("Toplam highlight edilen OBJECTID sayýsý:", allObjectIds.length);
 }
-// --- Highlight temizleme ---
-function clearHighlighting() {
-    highlightHandles.forEach(h => {
-        try { h.remove(); } catch (e) { }
-    });
-    highlightHandles = [];
-}
 
 $("#btnFilterClear").on("click", function () {
-    clearHighlighting();
+   
 
-    // Tüm sliderlarý resetle
+    //// Tüm sliderlarý resetle
     const sliders = [
         "#uwallSlider",
         "#uwindowSlider",
@@ -270,6 +282,8 @@ $("#btnFilterClear").on("click", function () {
         const slider = $(id).data("ionRangeSlider");
         if (slider) slider.reset();
     });
+
+    clearHighlighting();
 });
 
 $("#btnScenario").on("click", function () {
@@ -440,14 +454,6 @@ function setActiveWidget(type) {
 
             view.ui.add(activeWidget, "top-right");
             setActiveButton(document.getElementById("btnDaylight"));
-            break;
-
-        case "layerlist":
-            activeWidget = new LayerList({
-                view: view
-            });
-            view.ui.add(activeWidget, "top-right");
-            setActiveButton(document.getElementById("btnLayerList"));
             break;
 
         case "slice":

@@ -137,11 +137,6 @@
                         </button>
                     </li>
                     <li class="nav-item  pe-lg-1">
-                        <button type="button" id="btnLayerList" data-widget="layerlist" data-button="toolbar" class="btn btn-outline-tanap" data-bs-toggle="tooltip" title="Layer List">
-                            <i class="fas fa-layer-group text-light"></i>
-                        </button>
-                    </li>
-                    <li class="nav-item  pe-lg-1">
                         <button type="button" id="btnFiltre" data-widget="filtre"  class="btn btn-outline-tanap" data-bs-target="#drawerFilter" data-bs-toggle="offcanvas" title="Filtre Uygula">
                             <i class="far fa-filter text-light"></i>
                             <span class="d-inline-block d-lg-none text-light">Filtre</span>
@@ -332,13 +327,11 @@
                             </div>
                         </div>
                     </div>
-
-
-                </div>
-                <div class="d-flex justify-content-between">
-                    <button class="btn btn-primary btn-sm" id="btnScenario">Create Scenario</button>
-                    <div class="text-end">
-                        <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-primary btn-sm" id="btnScenario">Create Scenario</button>
+                        <div class="text-end">
+                            <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -407,6 +400,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.1/js/ion.rangeSlider.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
     <script type="module" src="https://js.arcgis.com/calcite-components/3.2.1/calcite.esm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="https://js.arcgis.com/4.33/"></script>
     <script type="module" src="/js/home3.js?d=@(Guid.CreateVersion7().ToString("N"))" asp-append-version="true"></script>
 </body>
