@@ -113,6 +113,75 @@ view.when(() => {
 
     initSliders(groupLayer);
 });
+
+async function filterScene() {
+    clearHighlighting();
+
+    // --- Mevcut 6 slider ---
+    const uwall = $("#uwallSlider").data("ionRangeSlider").result;
+    const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
+    const uroof = $("#uroofSlider").data("ionRangeSlider").result;
+    const uground = $("#ugroundSlider").data("ionRangeSlider").result;
+    const shgc = $("#shgcSlider").data("ionRangeSlider").result;
+    const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
+
+    // --- Diðer sliderlar ---
+    const grossFloor = $("#grossFloorSlider").data("ionRangeSlider").result;
+    const qHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider").result;
+    const equipment2025 = $("#sliderEquipment2025").data("ionRangeSlider").result;
+    const lighting2025 = $("#sliderLighting2025").data("ionRangeSlider").result;
+    const emission2025 = $("#sliderEmission2025").data("ionRangeSlider").result;
+
+    const qHeating2050 = $("#sliderQHeating2050").data("ionRangeSlider").result;
+    const equipment2050 = $("#sliderEquipment2050").data("ionRangeSlider").result;
+    const lighting2050 = $("#sliderLighting2050").data("ionRangeSlider").result;
+    const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
+
+    // --- IOD sliderlarý (string) ---
+    const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
+    const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
+
+    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
+    if (!activeLayer) return;
+
+    const lv = await view.whenLayerView(activeLayer);
+    const query = activeLayer.createQuery();
+    query.returnGeometry = true;
+
+    // --- where koþulu ---
+    query.where = `
+        Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
+        Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
+        Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
+        Uground >= ${uground.from} AND Uground <= ${uground.to} AND
+        SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
+        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to} AND
+        Gross_Floor_Area >= ${grossFloor.from} AND Gross_Floor_Area <= ${grossFloor.to} AND
+        F2025_BASE_Qheating >= ${qHeating2025.from} AND F2025_BASE_Qheating <= ${qHeating2025.to} AND
+        Equipment_Load_All_Scenarios >= ${equipment2025.from} AND Equipment_Load_All_Scenarios <= ${equipment2025.to} AND
+        Lighting_Load_All_Scenarios >= ${lighting2025.from} AND Lighting_Load_All_Scenarios <= ${lighting2025.to} AND
+        Emission_BASE__kg_CO2_ >= ${emission2025.from} AND Emission_BASE__kg_CO2_ <= ${emission2025.to} AND
+        F2050_BASE_Qheating >= ${qHeating2050.from} AND F2050_BASE_Qheating <= ${qHeating2050.to} AND
+        Equipment_Load_All_Scenarios >= ${equipment2050.from} AND Equipment_Load_All_Scenarios <= ${equipment2050.to} AND
+        Lighting_Load_All_Scenarios >= ${lighting2050.from} AND Lighting_Load_All_Scenarios <= ${lighting2050.to} AND
+        Emission_BASE__kg_CO2_ >= ${emission2050.from} AND Emission_BASE__kg_CO2_ <= ${emission2050.to} 
+    `;
+
+    const result = await activeLayer.queryFeatures(query);
+
+    if (!result.features || result.features.length === 0) {
+        activeLayer.definitionExpression = "1=0";
+        console.log("Sonuç bulunamadý, layer boþ gösteriliyor.");
+        return;
+    }
+
+    const objectIds = result.features.map(f => f.attributes.OBJECTID);
+    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
+
+    console.log("Toplam highlight edilen OBJECTID sayýsý:", objectIds.length);
+    //console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
+}
 // --- Sliderlarýn min/max deðerlerini WebScene layer'larýndan al ---
 async function getFieldMinMax(layer, field) {
     const query = layer.createQuery();
@@ -218,74 +287,6 @@ function clearHighlighting() {
     }
 }
 
-async function filterScene() {
-    clearHighlighting();
-
-    // --- Mevcut 6 slider ---
-    const uwall = $("#uwallSlider").data("ionRangeSlider").result;
-    const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
-    const uroof = $("#uroofSlider").data("ionRangeSlider").result;
-    const uground = $("#ugroundSlider").data("ionRangeSlider").result;
-    const shgc = $("#shgcSlider").data("ionRangeSlider").result;
-    const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
-
-    // --- Diðer sliderlar ---
-    const grossFloor = $("#grossFloorSlider").data("ionRangeSlider").result;
-    const qHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider").result;
-    const equipment2025 = $("#sliderEquipment2025").data("ionRangeSlider").result;
-    const lighting2025 = $("#sliderLighting2025").data("ionRangeSlider").result;
-    const emission2025 = $("#sliderEmission2025").data("ionRangeSlider").result;
-
-    const qHeating2050 = $("#sliderQHeating2050").data("ionRangeSlider").result;
-    const equipment2050 = $("#sliderEquipment2050").data("ionRangeSlider").result;
-    const lighting2050 = $("#sliderLighting2050").data("ionRangeSlider").result;
-    const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
-
-    // --- IOD sliderlarý (string) ---
-    const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
-    const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
-
-    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
-    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
-    if (!activeLayer) return;
-
-    const lv = await view.whenLayerView(activeLayer);
-    const query = activeLayer.createQuery();
-    query.returnGeometry = true;
-
-    // --- where koþulu ---
-    query.where = `
-        Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
-        Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
-        Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
-        Uground >= ${uground.from} AND Uground <= ${uground.to} AND
-        SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
-        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to} AND
-        Gross_Floor_Area >= ${grossFloor.from} AND Gross_Floor_Area <= ${grossFloor.to} AND
-        F2025_BASE_Qheating >= ${qHeating2025.from} AND F2025_BASE_Qheating <= ${qHeating2025.to} AND
-        Equipment_Load_All_Scenarios >= ${equipment2025.from} AND Equipment_Load_All_Scenarios <= ${equipment2025.to} AND
-        Lighting_Load_All_Scenarios >= ${lighting2025.from} AND Lighting_Load_All_Scenarios <= ${lighting2025.to} AND
-        Emission_BASE__kg_CO2_ >= ${emission2025.from} AND Emission_BASE__kg_CO2_ <= ${emission2025.to} AND
-        F2050_BASE_Qheating >= ${qHeating2050.from} AND F2050_BASE_Qheating <= ${qHeating2050.to} AND
-        Equipment_Load_All_Scenarios >= ${equipment2050.from} AND Equipment_Load_All_Scenarios <= ${equipment2050.to} AND
-        Lighting_Load_All_Scenarios >= ${lighting2050.from} AND Lighting_Load_All_Scenarios <= ${lighting2050.to} AND
-        Emission_BASE__kg_CO2_ >= ${emission2050.from} AND Emission_BASE__kg_CO2_ <= ${emission2050.to} 
-    `;
-
-    const result = await activeLayer.queryFeatures(query);
-
-    if (!result.features || result.features.length === 0) {
-        activeLayer.definitionExpression = "1=0";
-        console.log("Sonuç bulunamadý, layer boþ gösteriliyor.");
-        return;
-    }
-
-    const objectIds = result.features.map(f => f.attributes.OBJECTID);
-    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
-
-    console.log("Toplam highlight edilen OBJECTID sayýsý:", objectIds.length);
-    console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
-}
 
 function enableFeatureTableRowClick(table) {
     table.on("row-click", function (event) {
@@ -332,7 +333,6 @@ function enableFeatureTableRowClick(table) {
         }).catch(err => console.error(err));
     });
 }
-
 
 $("#btnFilterClear").on("click", function () {
 
