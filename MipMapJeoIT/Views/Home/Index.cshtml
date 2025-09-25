@@ -137,6 +137,11 @@
                         </button>
                     </li>
                     <li class="nav-item  pe-lg-1">
+                        <button type="button" id="btnFeatureTable" data-widget="FeatureTable" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Feature Table">
+                            <i class="fas fa-table text-light"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item  pe-lg-1">
                         <button type="button" id="btnFiltre" data-widget="filtre"  class="btn btn-outline-tanap" data-bs-target="#drawerFilter" data-bs-toggle="offcanvas" title="Filtre Uygula">
                             <i class="far fa-filter text-light"></i>
                             <span class="d-inline-block d-lg-none text-light">Filtre</span>
@@ -352,6 +357,12 @@
     </div>
 
     <div id="mapContainer" style="height:100vh;"></div>
+
+    <div class="containerTable" id="mainContainer" style="display: none;">
+        @* ATTRÝBUTE TABLE CONTAÝNER  *@
+    </div>
+
+
 <!--     <div id="queryDiv" class="esri-widget">
         <b>Query by geometry</b><br />
         <br />Draw a geometry to query by:

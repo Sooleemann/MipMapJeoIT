@@ -6,7 +6,7 @@ const [
     DirectLineMeasurement3D, AreaMeasurement3D, ElevationProfile, Daylight, Weather, webMercatorUtils,
     Bookmarks, Bookmark, Point, TileLayer, ElevationLayer, GroupLayer, Editor, Polygon, LabelClass,
     config, WebTileLayer, ClassBreaksRenderer, LineOfSight, IntegratedMesh3DTilesLayer, SpatialReference,
-    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer
+    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer, FeatureTable
 ] = await $arcgis.import([
     "@arcgis/core/Map.js",
     "@arcgis/core/layers/SceneLayer.js",
@@ -63,7 +63,8 @@ const [
     "@arcgis/core/geometry/operators/projectOperator.js",
     "@arcgis/core/analysis/ViewshedAnalysis.js",
     "@arcgis/core/analysis/Viewshed.js",
-    "@arcgis/core/layers/OrientedImageryLayer.js"
+    "@arcgis/core/layers/OrientedImageryLayer.js",
+    "@arcgis/core/widgets/FeatureTable.js"
 ]);
 
 
@@ -75,6 +76,11 @@ let sceneLayerViews = {};
 let sceneLayer;
 let highlightHandles = [];
 let sliderDefaults = {};
+let featureTable;
+let activeLayerView;
+let activeLayer;
+let highlight;
+
 
 let ODTUScene = new WebScene({
     portalItem: { id: "3adfc71e9e2a41cba7607b88046d6ecc" }
@@ -86,13 +92,12 @@ const view = new SceneView({
 });
 window.view = view;
 
+
+
 const layerList = new LayerList({
-    view: view
+    view: view,
 });
-// Adds widget below other elements in the top left corner of the view
-view.ui.add(layerList, {
-    position: "top-left"
-});
+view.ui.add(layerList, { position: "top-left" });
 
 view.when(() => {
     $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
@@ -198,9 +203,11 @@ async function initSliders(groupLayer) {
         }
     });
 }
-// --- Filtreleme ve WebScene üzerinde highlight ---
-// --- Highlight temizleme ---
+function toggleFeatureTable() {
+    document.getElementById("mapContainer").style.height = "100vh";
+    document.getElementById("mainContainer").style.display = "none";
 
+}
 // Filtreyi temizle
 function clearHighlighting() {
     highlightHandles.forEach(h => {
@@ -254,8 +261,33 @@ async function filterScene() {
     console.log("Toplam highlight edilen OBJECTID sayýsý:", allObjectIds.length);
 }
 
+function enableFeatureTableRowClick(table) {
+    table.on("row-click", function (event) {
+        const objectId = event.row.data.OBJECTID;
+
+        view.whenLayerView(table.layer).then(layerView => {
+            if (highlight) {
+                highlight.remove();
+            }
+            highlight = layerView.highlight(objectId);
+
+            // Zoom yap
+            table.layer.queryFeatures({
+                objectIds: [objectId],
+                outFields: ["*"],
+                returnGeometry: true
+            }).then(result => {
+                if (result.features.length > 0) {
+                    view.goTo(result.features[0].geometry);
+                }
+            });
+        });
+    });
+}
+
+
 $("#btnFilterClear").on("click", function () {
-   
+
 
     //// Tüm sliderlarý resetle
     const sliders = [
@@ -325,8 +357,8 @@ function toolbarButton_onClick(e) {
             activeWidget = null;
         }
         $(e.currentTarget).removeClass("active")
-        parselSorgula = false;
-        bookmarksGoster = false;
+        if (e.currentTarget.id == "btnFeatureTable")
+            toggleFeatureTable();
         return;
 
     }
@@ -445,6 +477,39 @@ function setActiveWidget(type) {
             });
             view.ui.add(activeWidget, "top-right");
             setActiveButton(document.getElementById("btnMeasureProfile"));
+            break;
+
+        case "FeatureTable":
+            var div = document.createElement("div");
+            div.id = "tableDiv";
+            div.style.height = "50vh";
+            div.style.width = "100%";
+
+            var conDiv = document.getElementById("mainContainer");
+            conDiv.innerHTML = ""; // önceki tabloyu temizle
+            conDiv.appendChild(div);
+
+            // Aktif Layer'i bul
+            const groupLayersss = view.map.layers.find(l => l.title === "Envelope Properties");
+
+            // GroupLayer altýndaki ilk görünür FeatureLayer’i bul
+            const activeLayer = groupLayersss.layers.find(l => l.visible && l.type === "feature");
+
+            if (!activeLayer) {
+                alert("Tablosu açýlacak aktif FeatureLayer yok!");
+                break;
+            }
+
+            activeWidget = new FeatureTable({
+                view: view,
+                layer: activeLayer,
+                container: div
+            });
+
+            document.getElementById("mainContainer").style.display = "block";
+            document.getElementById("mapContainer").style.height = "50vh";
+
+            setActiveButton(document.getElementById("btnFeatureTable"));
             break;
 
         case "daylight":
