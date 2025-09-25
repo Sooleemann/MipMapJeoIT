@@ -203,31 +203,47 @@ async function initSliders(groupLayer) {
         }
     });
 }
-function toggleFeatureTable() {
-    document.getElementById("mapContainer").style.height = "100vh";
-    document.getElementById("mainContainer").style.display = "none";
 
-}
 // Filtreyi temizle
 function clearHighlighting() {
     highlightHandles.forEach(h => {
         try { h.remove(); } catch (e) { }
     });
     highlightHandles = [];
-    if (activeWidget && activeWidget instanceof FeatureTable) {
-        activeWidget.layer.definitionExpression = null; // bütün veriler geri gelir
+
+    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
+    if (activeLayer) {
+        activeLayer.definitionExpression = null; // bütün veriler geri gelir
     }
 }
 
 async function filterScene() {
     clearHighlighting();
 
+    // --- Mevcut 6 slider ---
     const uwall = $("#uwallSlider").data("ionRangeSlider").result;
     const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
     const uroof = $("#uroofSlider").data("ionRangeSlider").result;
     const uground = $("#ugroundSlider").data("ionRangeSlider").result;
     const shgc = $("#shgcSlider").data("ionRangeSlider").result;
     const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
+
+    // --- Diðer sliderlar ---
+    const grossFloor = $("#grossFloorSlider").data("ionRangeSlider").result;
+    const qHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider").result;
+    const equipment2025 = $("#sliderEquipment2025").data("ionRangeSlider").result;
+    const lighting2025 = $("#sliderLighting2025").data("ionRangeSlider").result;
+    const emission2025 = $("#sliderEmission2025").data("ionRangeSlider").result;
+
+    const qHeating2050 = $("#sliderQHeating2050").data("ionRangeSlider").result;
+    const equipment2050 = $("#sliderEquipment2050").data("ionRangeSlider").result;
+    const lighting2050 = $("#sliderLighting2050").data("ionRangeSlider").result;
+    const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
+
+    // --- IOD sliderlarý (string) ---
+    const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
+    const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
 
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
     const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
@@ -236,18 +252,28 @@ async function filterScene() {
     const lv = await view.whenLayerView(activeLayer);
     const query = activeLayer.createQuery();
     query.returnGeometry = true;
+
+    // --- where koþulu ---
     query.where = `
         Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
         Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
         Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
         Uground >= ${uground.from} AND Uground <= ${uground.to} AND
         SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
-        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to}
+        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to} AND
+        Gross_Floor_Area >= ${grossFloor.from} AND Gross_Floor_Area <= ${grossFloor.to} AND
+        F2025_BASE_Qheating >= ${qHeating2025.from} AND F2025_BASE_Qheating <= ${qHeating2025.to} AND
+        Equipment_Load_All_Scenarios >= ${equipment2025.from} AND Equipment_Load_All_Scenarios <= ${equipment2025.to} AND
+        Lighting_Load_All_Scenarios >= ${lighting2025.from} AND Lighting_Load_All_Scenarios <= ${lighting2025.to} AND
+        Emission_BASE__kg_CO2_ >= ${emission2025.from} AND Emission_BASE__kg_CO2_ <= ${emission2025.to} AND
+        F2050_BASE_Qheating >= ${qHeating2050.from} AND F2050_BASE_Qheating <= ${qHeating2050.to} AND
+        Equipment_Load_All_Scenarios >= ${equipment2050.from} AND Equipment_Load_All_Scenarios <= ${equipment2050.to} AND
+        Lighting_Load_All_Scenarios >= ${lighting2050.from} AND Lighting_Load_All_Scenarios <= ${lighting2050.to} AND
+        Emission_BASE__kg_CO2_ >= ${emission2050.from} AND Emission_BASE__kg_CO2_ <= ${emission2050.to} 
     `;
 
     const result = await activeLayer.queryFeatures(query);
 
-    // ---- Eðer hiç kayýt yoksa layer'ý boþ göster ----
     if (!result.features || result.features.length === 0) {
         activeLayer.definitionExpression = "1=0";
         console.log("Sonuç bulunamadý, layer boþ gösteriliyor.");
@@ -255,40 +281,58 @@ async function filterScene() {
     }
 
     const objectIds = result.features.map(f => f.attributes.OBJECTID);
-    //const handle = lv.highlight(objectIds);
-    //highlightHandles.push(handle);
+    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
 
     console.log("Toplam highlight edilen OBJECTID sayýsý:", objectIds.length);
-
-    // ---- Layer'a filtre uygula ----
-    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
     console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
 }
-
 
 function enableFeatureTableRowClick(table) {
     table.on("row-click", function (event) {
         const objectId = event.row.data.OBJECTID;
+        if (!objectId) {
+            console.warn("OBJECTID bulunamadý!");
+            return;
+        }
 
         view.whenLayerView(table.layer).then(layerView => {
+            // Önce varsa eski highlight'ý kaldýr
             if (highlight) {
                 highlight.remove();
             }
+
+            // Yeni highlight
             highlight = layerView.highlight(objectId);
 
-            // Zoom yap
+            // Zoom
             table.layer.queryFeatures({
                 objectIds: [objectId],
                 outFields: ["*"],
                 returnGeometry: true
             }).then(result => {
-                if (result.features.length > 0) {
-                    view.goTo(result.features[0].geometry);
+                if (result.features.length > 0 && result.features[0].geometry) {
+                    const geom = result.features[0].geometry;
+
+                    // SceneView'da extent ile gitmek genellikle daha güvenli
+                    let target;
+                    if (geom.type === "point") {
+                        target = geom;
+                    } else {
+                        target = geom.extent || geom; // polygon/multipoint varsa extent kullan
+                    }
+
+                    view.goTo({
+                        target: target,
+                        tilt: 60,    // isteðe baðlý, daha iyi 3D görünüm
+                        zoom: 17     // isteðe baðlý, SceneView'da scale yerine zoom
+                    }).catch(err => console.error(err));
                 }
             });
-        });
+
+        }).catch(err => console.error(err));
     });
 }
+
 
 $("#btnFilterClear").on("click", function () {
 
@@ -383,6 +427,12 @@ function toggle_full_screen() {
             document.msExitFullscreen();
         }
     }
+}
+
+function toggleFeatureTable() {
+    document.getElementById("mapContainer").style.height = "100vh";
+    document.getElementById("mainContainer").style.display = "none";
+
 }
 
 function toolbarButton_onClick(e) {
@@ -511,9 +561,15 @@ function setActiveWidget(type) {
             }
 
             activeWidget = new FeatureTable({
+                returnGeometryEnabled: true,
                 view: view,
                 layer: activeLayer,
-                container: div
+                container: div,
+                actionColumnConfig: {
+                    label: "Zoom to feature",
+                    icon: "zoom-to-object",
+                    callback: ({ feature }) => view.goTo(feature),
+                },
             });
 
             document.getElementById("mainContainer").style.display = "block";
