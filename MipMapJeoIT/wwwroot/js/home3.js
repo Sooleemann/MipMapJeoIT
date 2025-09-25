@@ -214,6 +214,9 @@ function clearHighlighting() {
         try { h.remove(); } catch (e) { }
     });
     highlightHandles = [];
+    if (activeWidget && activeWidget instanceof FeatureTable) {
+        activeWidget.layer.definitionExpression = null; // bütün veriler geri gelir
+    }
 }
 
 async function filterScene() {
@@ -225,41 +228,43 @@ async function filterScene() {
     const uground = $("#ugroundSlider").data("ionRangeSlider").result;
     const shgc = $("#shgcSlider").data("ionRangeSlider").result;
     const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
-    //const grossfloorarea = $("#grossFloorSlider").data("ionRangeSlider").result;
 
-    // Tüm layerlardan filtrele ve highlight uygula
-    const filterPromises = Object.entries(sceneLayerViews).map(async ([name, lv]) => {
-        if (!lv) return [];
+    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
+    if (!activeLayer) return;
 
-        const layer = lv.layer;
-        const query = layer.createQuery();
-        query.returnGeometry = true;
+    const lv = await view.whenLayerView(activeLayer);
+    const query = activeLayer.createQuery();
+    query.returnGeometry = true;
+    query.where = `
+        Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
+        Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
+        Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
+        Uground >= ${uground.from} AND Uground <= ${uground.to} AND
+        SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
+        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to}
+    `;
 
-        query.where = `
-            Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
-            Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
-            Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
-            Uground >= ${uground.from} AND Uground <= ${uground.to} AND
-            SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
-            Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to}
-        `;
-        //Gross_Floor_Area >= ${ grossfloorarea.from } AND Gross_Floor_Area <= ${ grossfloorarea.to }
+    const result = await activeLayer.queryFeatures(query);
 
+    // ---- Eðer hiç kayýt yoksa layer'ý boþ göster ----
+    if (!result.features || result.features.length === 0) {
+        activeLayer.definitionExpression = "1=0";
+        console.log("Sonuç bulunamadý, layer boþ gösteriliyor.");
+        return;
+    }
 
-        const result = await layer.queryFeatures(query);
-        if (!result.features || result.features.length === 0) return [];
+    const objectIds = result.features.map(f => f.attributes.OBJECTID);
+    //const handle = lv.highlight(objectIds);
+    //highlightHandles.push(handle);
 
-        const objectIds = result.features.map(f => f.attributes.OBJECTID);
+    console.log("Toplam highlight edilen OBJECTID sayýsý:", objectIds.length);
 
-        const handle = lv.highlight(objectIds);
-        highlightHandles.push(handle);
-
-        return objectIds;
-    });
-
-    const allObjectIds = (await Promise.all(filterPromises)).flat();
-    console.log("Toplam highlight edilen OBJECTID sayýsý:", allObjectIds.length);
+    // ---- Layer'a filtre uygula ----
+    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
+    console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
 }
+
 
 function enableFeatureTableRowClick(table) {
     table.on("row-click", function (event) {
@@ -284,7 +289,6 @@ function enableFeatureTableRowClick(table) {
         });
     });
 }
-
 
 $("#btnFilterClear").on("click", function () {
 
@@ -350,20 +354,6 @@ document.getElementById("btnScenario").addEventListener("click", function () {
     let toast = new bootstrap.Toast(document.getElementById('successToast'));
     toast.show();
 });
-function toolbarButton_onClick(e) {
-    if ($(e.currentTarget).hasClass("active")) {
-        if (activeWidget) {
-            activeWidget.destroy();
-            activeWidget = null;
-        }
-        $(e.currentTarget).removeClass("active")
-        if (e.currentTarget.id == "btnFeatureTable")
-            toggleFeatureTable();
-        return;
-
-    }
-    setActiveWidget($(e.currentTarget).attr("data-widget"));
-}
 function toggle_full_screen() {
     if ((document.fullScreenElement && document.fullScreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
         if (document.documentElement.requestFullScreen) {
@@ -394,6 +384,26 @@ function toggle_full_screen() {
         }
     }
 }
+
+function toolbarButton_onClick(e) {
+    if (e.currentTarget.id === "btnFiltre") return; //
+
+
+    if ($(e.currentTarget).hasClass("active")) {
+        if (activeWidget) {
+            activeWidget.destroy();
+            activeWidget = null;
+        }
+        if (e.currentTarget.id === "btnFiltre") return; //
+        $(e.currentTarget).removeClass("active")
+        if (e.currentTarget.id == "btnFeatureTable")
+            toggleFeatureTable();
+        return;
+
+    }
+    setActiveWidget($(e.currentTarget).attr("data-widget"));
+}
+
 function setActiveWidget(type) {
     if (activeWidget) {
         activeWidget.destroy();
@@ -540,11 +550,11 @@ function setActiveWidget(type) {
     }
 }
 function setActiveButton(selectedButton) {
-
     view.focus();
-    const elements = document.getElementsByClassName("active");
+    const elements = document.getElementsByClassName("toolbar-btn");
     for (let i = 0; i < elements.length; i++) {
         elements[i].classList.remove("active");
+        if (elements[i].id === "btnFiltre") continue;
     }
     if (selectedButton) {
         selectedButton.classList.add("active");
