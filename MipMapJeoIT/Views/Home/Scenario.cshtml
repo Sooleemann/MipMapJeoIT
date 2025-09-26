@@ -4,7 +4,7 @@
     Layout = null;
 }
 <!DOCTYPE html>
-<html data-bs-theme="dark">
+<html data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -18,17 +18,24 @@
     <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body>
-    <div class="container py-4 mt-5">
-        <div class="text-center mb-5">
+    <style>
+        .chart-canvas {
+            max-height: 250px; /* hepsi aynı yükseklikte olacak */
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <div class="container py-4 mt-1 mb-5">
+        <div class="text-center mb-1">
             <h1 class="display-4 text-white">Create Scenario</h1>
-            <p class="lead text-white-50">Choose your scenario settings below</p>
         </div>
         <div class="row g-3">
             <!-- Scenario 1 -->
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="card text-white bg-danger">
                     <div class="card-body">
-                        <h5 class="card-title">Scenario 1: 2025_Base_HP_PV_Qheating</h5>
+                        <h5 class="card-title">Scenario 1: 2025_Base_Qheating</h5>
 
                         <!-- Year Dropdown -->
                         <p>
@@ -38,6 +45,7 @@
                                 <option value="2050">2050</option>
                             </select>
                         </p>
+
                         <!-- Base / Enve with HP/PV -->
                         <div class="mt-2">
                             <div class="d-flex align-items-center">
@@ -46,27 +54,28 @@
 
                                 <!-- HP / PV only for Base -->
                                 <div class="d-flex align-items-center">
-                                    <input type="checkbox" id="hpOption1" checked>
+                                    <input type="checkbox" id="hpOption1">
                                     <label for="hpOption1" class="mb-0 ms-1 me-2">HP</label>
-                                    <input type="checkbox" id="pvOption1" checked>
+                                    <input type="checkbox" id="pvOption1">
                                     <label for="pvOption1" class="mb-0 ms-1">PV</label>
                                 </div>
                             </div>
 
-                            <div class="mt-1">
-                                <input type="radio" name="scenario1BaseEnve" id="enveOption1">
-                                <label for="enveOption1" class="mb-0">Enve</label>
+                            <!-- Enve + Button sağda -->
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <input type="radio" name="scenario1BaseEnve" id="enveOption1">
+                                    <label for="enveOption1" class="mb-0">Enve</label>
+                                </div>
+                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
-
-                        <!-- Button -->
-                        <button class="btn btn-light btn-sm mt-2">Create</button>
                     </div>
                 </div>
             </div>
 
             <!-- Scenario 2 -->
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="card text-white bg-primary">
                     <div class="card-body">
                         <h5 class="card-title">Scenario 2: Scenario2FieldName</h5>
@@ -94,23 +103,26 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1">
-                                <input type="radio" name="scenario2BaseEnve" id="enveOption2">
-                                <label for="enveOption2" class="mb-0">Enve</label>
+                            <!-- Enve + Button sağda -->
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <input type="radio" name="scenario2BaseEnve" id="enveOption2">
+                                    <label for="enveOption2" class="mb-0">Enve</label>
+                                </div>
+                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
-
-                        <button class="btn btn-light btn-sm mt-2">Create</button>
                     </div>
                 </div>
             </div>
 
             <!-- Scenario 3 -->
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="card text-white bg-success">
                     <div class="card-body">
                         <h5 class="card-title">Scenario 3: Scenario3FieldName</h5>
 
+                        <!-- Year Dropdown -->
                         <p>
                             Year:
                             <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
@@ -119,6 +131,7 @@
                             </select>
                         </p>
 
+                        <!-- Base / Enve with HP/PV -->
                         <div class="mt-2">
                             <div class="d-flex align-items-center">
                                 <input type="radio" name="scenario3BaseEnve" id="baseOption3" checked>
@@ -132,23 +145,26 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1">
-                                <input type="radio" name="scenario3BaseEnve" id="enveOption3">
-                                <label for="enveOption3" class="mb-0">Enve</label>
+                            <!-- Enve + Button sağda -->
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <input type="radio" name="scenario3BaseEnve" id="enveOption3">
+                                    <label for="enveOption3" class="mb-0">Enve</label>
+                                </div>
+                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
-
-                        <button class="btn btn-light btn-sm mt-2">Create</button>
                     </div>
                 </div>
             </div>
 
             <!-- Scenario 4 -->
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <div class="card text-dark bg-warning">
                     <div class="card-body">
                         <h5 class="card-title">Scenario 4: Scenario4FieldName</h5>
 
+                        <!-- Year Dropdown -->
                         <p>
                             Year:
                             <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
@@ -157,10 +173,7 @@
                             </select>
                         </p>
 
-@*                         <div>
-                            <input type="range" class="form-range">
-                        </div> *@
-
+                        <!-- Base / Enve with HP/PV -->
                         <div class="mt-2">
                             <div class="d-flex align-items-center">
                                 <input type="radio" name="scenario4BaseEnve" id="baseOption4" checked>
@@ -174,18 +187,128 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1">
-                                <input type="radio" name="scenario4BaseEnve" id="enveOption4">
-                                <label for="enveOption4" class="mb-0">Enve</label>
+                            <!-- Enve + Button sağda -->
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <input type="radio" name="scenario4BaseEnve" id="enveOption4">
+                                    <label for="enveOption4" class="mb-0">Enve</label>
+                                </div>
+                                <button class="btn btn-dark btn-sm">Create</button>
                             </div>
                         </div>
-
-                        <button class="btn btn-dark btn-sm mt-2">Create</button>
                     </div>
                 </div>
             </div>
 
+
         </div>
     </div>
+
+    <div class="container py-4 mt-1">
+        <div class="row">
+            <!-- Pie Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Pie Chart</h6>
+                        <canvas id="pieChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boxplot (taklit barlar) -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Boxplot</h6>
+                        <canvas id="boxPlotChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scatter -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Scatter Chart</h6>
+                        <canvas id="scatterChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Bar Chart</h6>
+                        <canvas id="barChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Pie Chart
+        new Chart(document.getElementById("pieChart"), {
+            type: "pie",
+            data: {
+                labels: ["A", "B", "C", "D"],
+                datasets: [{
+                    data: [10, 20, 30, 40],
+                    backgroundColor: ["#ff6384", "#36a2eb", "#cc65fe", "#ffce56"]
+                }]
+            }
+        });
+
+        // Boxplot (Bar şeklinde dummy)
+        new Chart(document.getElementById("boxPlotChart"), {
+            type: "bar",
+            data: {
+                labels: ["Set 1", "Set 2", "Set 3"],
+                datasets: [{
+                    label: "Values",
+                    data: [12, 19, 7],
+                    backgroundColor: "#4bc0c0"
+                }]
+            }
+        });
+
+        // Scatter Chart
+        new Chart(document.getElementById("scatterChart"), {
+            type: "scatter",
+            data: {
+                datasets: [{
+                    label: "Random Points",
+                    data: [
+                        {x: -10, y: 0},
+                        {x: -5, y: 5},
+                        {x: 0, y: 10},
+                        {x: 5, y: 5},
+                        {x: 10, y: 0}
+                    ],
+                    backgroundColor: "#ff6384"
+                }]
+            }
+        });
+
+        // Bar Chart
+        new Chart(document.getElementById("barChart"), {
+            type: "bar",
+            data: {
+                labels: ["Red", "Blue", "Yellow", "Green", "Purple"],
+                datasets: [{
+                    label: "Votes",
+                    data: [12, 19, 3, 5, 2],
+                    backgroundColor: [
+                        "#ff6384",
+                        "#36a2eb",
+                        "#ffce56",
+                        "#4bc0c0",
+                        "#9966ff"
+                    ]
+                }]
+            }
+        });
+    </script>
 </body>
 </html>
