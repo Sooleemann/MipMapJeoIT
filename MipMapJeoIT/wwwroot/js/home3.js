@@ -102,13 +102,29 @@ view.ui.add(layerList, { position: "top-left" });
 view.when(() => {
     $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
     homeCamera = view.camera.clone();
+
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+
+    if (groupLayer) {
+        // GroupLayer içindeki Uwall katmanýný bul
+        const uwallLayer = groupLayer.layers.find(l => l.title === "Uwall");
+
+        // Tüm alt katmanlarý kontrol et
+        groupLayer.layers.forEach(l => {
+            // Sadece Uwall açýk kalsýn
+            l.visible = (l.title === "Uwall");
+        });
+    }
 
     const layerNames = ["Uwall", "Uwindow", "Uroof", "Uground", "SHGC", "Infiltration Rate"];
 
     layerNames.forEach(name => {
         const layer = groupLayer.layers.find(l => l.title === name);
-        if (layer) { view.whenLayerView(layer).then(lv => { sceneLayerViews[name] = lv; }); }
+        if (layer) {
+            view.whenLayerView(layer).then(lv => {
+                sceneLayerViews[name] = lv;
+            });
+        }
     });
 
     initSliders(groupLayer);
@@ -272,7 +288,6 @@ async function initSliders(groupLayer) {
         }
     });
 }
-
 // Filtreyi temizle
 function clearHighlighting() {
     highlightHandles.forEach(h => {
@@ -286,7 +301,6 @@ function clearHighlighting() {
         activeLayer.definitionExpression = null; // bütün veriler geri gelir
     }
 }
-
 
 function enableFeatureTableRowClick(table) {
     table.on("row-click", function (event) {
@@ -398,6 +412,7 @@ document.getElementById("btnScenario").addEventListener("click", function () {
     let toast = new bootstrap.Toast(document.getElementById('successToast'));
     toast.show();
 });
+
 function toggle_full_screen() {
     if ((document.fullScreenElement && document.fullScreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
         if (document.documentElement.requestFullScreen) {
@@ -605,6 +620,7 @@ function setActiveWidget(type) {
             break;
     }
 }
+
 function setActiveButton(selectedButton) {
     view.focus();
     const elements = document.getElementsByClassName("toolbar-btn");
@@ -618,6 +634,7 @@ function setActiveButton(selectedButton) {
 }
 
 const yearDropdown = document.getElementById("yearDropdown");
+
 function updateYearContent() {
     const selectedYear = yearDropdown.value;
 
