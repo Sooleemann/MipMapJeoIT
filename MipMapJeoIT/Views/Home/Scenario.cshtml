@@ -4,7 +4,7 @@
     Layout = null;
 }
 <!DOCTYPE html>
-<html data-bs-theme="light">
+<html data-bs-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -23,13 +23,10 @@
             max-height: 250px; /* hepsi aynı yükseklikte olacak */
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="container py-4 mt-1 mb-5">
-        <div class="text-center mb-1">
-            <h1 class="display-4 text-white">Create Scenario</h1>
-        </div>
+    <div class="container py-4 mt-5 mb-5">
         <div class="row g-3">
             <!-- Scenario 1 -->
             <div class="col-md-3">
@@ -208,107 +205,33 @@
         <div class="row">
             <!-- Pie Chart -->
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title">Pie Chart</h6>
-                        <canvas id="pieChart" class="chart-canvas"></canvas>
-                    </div>
+                <div class="border rounded p-2">
+                    <div id="pieChart"></div>
                 </div>
             </div>
 
-            <!-- Boxplot (taklit barlar) -->
+            <!-- Boxplot -->
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title">Boxplot</h6>
-                        <canvas id="boxPlotChart" class="chart-canvas"></canvas>
-                    </div>
+                <div class="border rounded p-2">
+                    <div id="boxPlotChart"></div>
                 </div>
             </div>
 
             <!-- Scatter -->
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title">Scatter Chart</h6>
-                        <canvas id="scatterChart" class="chart-canvas"></canvas>
-                    </div>
+                <div class="border rounded p-2">
+                    <div id="scatterChart"></div>
                 </div>
             </div>
 
             <!-- Bar Chart -->
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title">Bar Chart</h6>
-                        <canvas id="barChart" class="chart-canvas"></canvas>
-                    </div>
+                <div class="border rounded p-2">
+                    <div id="barChart"></div>
                 </div>
             </div>
         </div>
     </div>
-    <script>
-        // Pie Chart
-        new Chart(document.getElementById("pieChart"), {
-            type: "pie",
-            data: {
-                labels: ["A", "B", "C", "D"],
-                datasets: [{
-                    data: [10, 20, 30, 40],
-                    backgroundColor: ["#ff6384", "#36a2eb", "#cc65fe", "#ffce56"]
-                }]
-            }
-        });
 
-        // Boxplot (Bar şeklinde dummy)
-        new Chart(document.getElementById("boxPlotChart"), {
-            type: "bar",
-            data: {
-                labels: ["Set 1", "Set 2", "Set 3"],
-                datasets: [{
-                    label: "Values",
-                    data: [12, 19, 7],
-                    backgroundColor: "#4bc0c0"
-                }]
-            }
-        });
-
-        // Scatter Chart
-        new Chart(document.getElementById("scatterChart"), {
-            type: "scatter",
-            data: {
-                datasets: [{
-                    label: "Random Points",
-                    data: [
-                        {x: -10, y: 0},
-                        {x: -5, y: 5},
-                        {x: 0, y: 10},
-                        {x: 5, y: 5},
-                        {x: 10, y: 0}
-                    ],
-                    backgroundColor: "#ff6384"
-                }]
-            }
-        });
-
-        // Bar Chart
-        new Chart(document.getElementById("barChart"), {
-            type: "bar",
-            data: {
-                labels: ["Red", "Blue", "Yellow", "Green", "Purple"],
-                datasets: [{
-                    label: "Votes",
-                    data: [12, 19, 3, 5, 2],
-                    backgroundColor: [
-                        "#ff6384",
-                        "#36a2eb",
-                        "#ffce56",
-                        "#4bc0c0",
-                        "#9966ff"
-                    ]
-                }]
-            }
-        });
-    </script>
 </body>
 </html>

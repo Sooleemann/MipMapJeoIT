@@ -26,7 +26,8 @@
         body {
             padding: 0;
             margin: 0;
-            height: 100vh;
+            height: 100%;
+/*             overflow: hidden; */
         }
 
         #toolbarDiv {
@@ -49,22 +50,10 @@
             z-index: 1000;
         }
 
-        #previewContainer {
-            pointer-events: none;
-            width: 200px;
-            height: 125px;
-            margin: 0;
-            position: absolute;
-            bottom: 25px;
-            right: 10px;
-            border: 1px solid dimgrey;
-            display:none;
-            z-index:50;
-        }
-
         #drawerFilter {
             top: 20px;
         }
+
     </style>
 </head>
 <body>
@@ -73,7 +62,7 @@
         <div class="container-fluid">
             <a class="navbar-brand p-0" href="https://www.mipmap-technologies.com/" target="_blank">
                 <img src="~/images/odtu.png" alt="Logo" class="img-fluid" style="max-height:38px;" />
-            </a>    
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="true" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -145,6 +134,11 @@
                         <button type="button" id="btnFiltre" data-widget="filtre" class="btn btn-outline-tanap" data-button="toolbar" data-bs-target="#drawerFilter" data-bs-toggle="offcanvas" title="Filtre Uygula">
                             <i class="far fa-filter text-light"></i>
                             <span class="d-inline-block d-lg-none text-light">Filtre</span>
+                        </button>
+                    </li>
+                    <li class="nav-item pe-lg-1">
+                        <button type="button" id="btnScenario" class="btn btn-outline-tanap active">
+                            Create Scenario
                         </button>
                     </li>
                 </ul>
@@ -333,10 +327,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <button class="btn btn-primary btn-sm" id="btnScenario">Create Scenario</button>
-
-                    </div>
                 </div>
                 <div class="text-end">
                     <button class="btn btn-light btn-sm" id="btnFilterClear">Clear</button>
@@ -345,66 +335,233 @@
         </div>
     </div>
 
-    <!-- Toast Mesajý -->
-    <div class="toast-container position-fixed top-0 start-0 p-3">
-        <div id="successToast" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <strong class="me-auto">Success</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                Scenario has been successfully saved!
-            </div>
+@*     <div class="d-flex" style="height: 100vh;">
+        <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;"></div>
+        <div id="mapContainer" style="flex: 1;">
+
         </div>
     </div>
 
-    <div id="mapContainer" style="height:100vh;"></div>
+    <!--AttributeTable-->
+    <div class="containerTable" id="tableContainer" style="display: none;"></div> *@
 
-    <div class="containerTable" id="mainContainer" style="display: none;">
-        @* ATTRÝBUTE TABLE CONTAÝNER  *@
+    <div class="d-flex flex-column" style="height: 100vh;">
+        <div class="d-flex" style="flex: 1;">
+            <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;"></div>
+            <div id="mapContainer" style="flex: 1;"></div>
+        </div>
+        <div class="containerTable" id="tableContainer" style="display: none; height: 50vh;"></div>
     </div>
 
 
-<!--     <div id="queryDiv" class="esri-widget">
-        <b>Query by geometry</b><br />
-        <br />Draw a geometry to query by:
-        <div class="geometry-options">
-            <button class="esri-widget--button esri-icon-map-pin geometry-button"
-                    id="point-geometry-button"
-                    value="point"
-                    title="Query by point"></button>
-            <button class="esri-widget--button esri-icon-polyline geometry-button"
-                    id="line-geometry-button"
-                    value="polyline"
-                    title="Query by line"></button>
-            <button class="esri-widget--button esri-icon-polygon geometry-button"
-                    id="polygon-geometry-button"
-                    value="polygon"
-                    title="Query by polygon"></button>
-        </div>
-        <br />
-        <div class="tooltip">
-            <label for="bufferNum">Set a geometry buffer size:</label>
-            <div id="bufferNum"></div>
-        </div>
-        <br />
-        <button class="esri-button" id="clearGeometry" type="button">Clear</button>
-    </div> 
+   @* <div class="d-flex flex-column" style="height: 100vh;">
+        <div class="d-flex" style="flex: 1;">
+            <!-- Scenario Panel -->
+            <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;">
+                <div class="container py-4">
+                    <div class="row g-3">
+                        <!-- Scenario 1 -->
+                        <div class="col-md-3">
+                            <div class="card text-white bg-danger">
+                                <div class="card-body">
+                                    <h5 class="card-title">Scenario 1: 2025_Base_Qheating</h5>
+                                    <p>
+                                        Year:
+                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                            <option value="2025" selected>2025</option>
+                                            <option value="2050">2050</option>
+                                        </select>
+                                    </p>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <input type="radio" name="scenario1BaseEnve" id="baseOption1" checked>
+                                            <label for="baseOption1" class="mb-0 ms-1 me-3">Base</label>
+                                            <div class="d-flex align-items-center">
+                                                <input type="checkbox" id="hpOption1">
+                                                <label for="hpOption1" class="mb-0 ms-1 me-2">HP</label>
+                                                <input type="checkbox" id="pvOption1">
+                                                <label for="pvOption1" class="mb-0 ms-1">PV</label>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div>
+                                                <input type="radio" name="scenario1BaseEnve" id="enveOption1">
+                                                <label for="enveOption1" class="mb-0">Enve</label>
+                                            </div>
+                                            <button class="btn btn-light btn-sm">Create</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Scenario 2 -->
+                        <div class="col-md-3">
+                            <div class="card text-white bg-primary">
+                                <div class="card-body">
+                                    <h5 class="card-title">Scenario 2: Scenario2FieldName</h5>
 
-    <div id="resultDiv" class="esri-widget">
-        <div class="count">
-            Selected Buildings:
-            <div class="count" id="count">0</div>
-        </div>
-        <div class="charts">
-            <div>
-                <canvas id="year-chart" height="250" width="260" />
+                                    <!-- Year Dropdown -->
+                                    <p>
+                                        Year:
+                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                            <option value="2025" selected>2025</option>
+                                            <option value="2050">2050</option>
+                                        </select>
+                                    </p>
+
+                                    <!-- Base / Enve with HP/PV -->
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <input type="radio" name="scenario2BaseEnve" id="baseOption2" checked>
+                                            <label for="baseOption2" class="mb-0 ms-1 me-3">Base</label>
+
+                                            <div class="d-flex align-items-center">
+                                                <input type="checkbox" id="hpOption2">
+                                                <label for="hpOption2" class="mb-0 ms-1 me-2">HP</label>
+                                                <input type="checkbox" id="pvOption2">
+                                                <label for="pvOption2" class="mb-0 ms-1">PV</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Enve + Button saðda -->
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div>
+                                                <input type="radio" name="scenario2BaseEnve" id="enveOption2">
+                                                <label for="enveOption2" class="mb-0">Enve</label>
+                                            </div>
+                                            <button class="btn btn-light btn-sm">Create</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scenario 3 -->
+                        <div class="col-md-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body">
+                                    <h5 class="card-title">Scenario 3: Scenario3FieldName</h5>
+
+                                    <!-- Year Dropdown -->
+                                    <p>
+                                        Year:
+                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                            <option value="2025" selected>2025</option>
+                                            <option value="2050">2050</option>
+                                        </select>
+                                    </p>
+
+                                    <!-- Base / Enve with HP/PV -->
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <input type="radio" name="scenario3BaseEnve" id="baseOption3" checked>
+                                            <label for="baseOption3" class="mb-0 ms-1 me-3">Base</label>
+
+                                            <div class="d-flex align-items-center">
+                                                <input type="checkbox" id="hpOption3">
+                                                <label for="hpOption3" class="mb-0 ms-1 me-2">HP</label>
+                                                <input type="checkbox" id="pvOption3">
+                                                <label for="pvOption3" class="mb-0 ms-1">PV</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Enve + Button saðda -->
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div>
+                                                <input type="radio" name="scenario3BaseEnve" id="enveOption3">
+                                                <label for="enveOption3" class="mb-0">Enve</label>
+                                            </div>
+                                            <button class="btn btn-light btn-sm">Create</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scenario 4 -->
+                        <div class="col-md-3">
+                            <div class="card text-dark bg-warning">
+                                <div class="card-body">
+                                    <h5 class="card-title">Scenario 4: Scenario4FieldName</h5>
+
+                                    <!-- Year Dropdown -->
+                                    <p>
+                                        Year:
+                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                            <option value="2025" selected>2025</option>
+                                            <option value="2050">2050</option>
+                                        </select>
+                                    </p>
+
+                                    <!-- Base / Enve with HP/PV -->
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <input type="radio" name="scenario4BaseEnve" id="baseOption4" checked>
+                                            <label for="baseOption4" class="mb-0 ms-1 me-3">Base</label>
+
+                                            <div class="d-flex align-items-center">
+                                                <input type="checkbox" id="hpOption4">
+                                                <label for="hpOption4" class="mb-0 ms-1 me-2">HP</label>
+                                                <input type="checkbox" id="pvOption4">
+                                                <label for="pvOption4" class="mb-0 ms-1">PV</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Enve + Button saðda -->
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div>
+                                                <input type="radio" name="scenario4BaseEnve" id="enveOption4">
+                                                <label for="enveOption4" class="mb-0">Enve</label>
+                                            </div>
+                                            <button class="btn btn-dark btn-sm">Create</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container py-4 mt-1">
+                    <div class="row">
+                        <!-- Pie Chart -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="pieChart"></div>
+                            </div>
+                        </div>
+
+                        <!-- Boxplot -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="boxPlotChart"></div>
+                            </div>
+                        </div>
+
+                        <!-- Scatter -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="scatterChart"></div>
+                            </div>
+                        </div>
+
+                        <!-- Bar Chart -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="barChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <canvas id="material-chart" width="250" height="300" />
-            </div>
+
+            <!-- Harita -->
+            <div id="mapContainer" style="flex: 1;"></div>
         </div>
-    </div>-->
+        <div class="containerTable" id="tableContainer" style="display: none; height: 50vh;"></div>
+    </div> *@
+
+
 
     <script src="~/js/turf.min.js"></script>
     <link href="~/lib/ion-rangeslider/ion.rangeSlider.min.css" rel="stylesheet" />
@@ -412,6 +569,7 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.1/js/ion.rangeSlider.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script type="module" src="https://js.arcgis.com/calcite-components/3.2.1/calcite.esm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="https://js.arcgis.com/4.33/"></script>

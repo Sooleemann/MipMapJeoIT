@@ -1,4 +1,4 @@
-const [
+Ôªøconst [
     Map, SceneLayer, FeatureLayer, WebScene, SceneView, GraphicsLayer, SketchViewModel, Slider,
     geodesicBufferOperator, Graphic, promiseUtils, Camera, LayerList, reactiveUtils, intl, Expand,
     GeoJSONLayer, IntegratedMeshLayer, Field, Symbol, BuildingSceneLayer, Slice, SlicePlane, Collection,
@@ -106,12 +106,12 @@ view.when(() => {
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
 
     if (groupLayer) {
-        // GroupLayer iÁindeki Uwall katman˝n˝ bul
+        // GroupLayer i√ßindeki Uwall katmanƒ±nƒ± bul
         const uwallLayer = groupLayer.layers.find(l => l.title === "Uwall");
 
-        // T¸m alt katmanlar˝ kontrol et
+        // T√ºm alt katmanlarƒ± kontrol et
         groupLayer.layers.forEach(l => {
-            // Sadece Uwall aÁ˝k kals˝n
+            // Sadece Uwall a√ßƒ±k kalsƒ±n
             l.visible = (l.title === "Uwall");
         });
     }
@@ -141,7 +141,7 @@ async function filterScene() {
     const shgc = $("#shgcSlider").data("ionRangeSlider").result;
     const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
 
-    // --- Dier sliderlar ---
+    // --- Diƒüer sliderlar ---
     const grossFloor = $("#grossFloorSlider").data("ionRangeSlider").result;
     const qHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider").result;
     const equipment2025 = $("#sliderEquipment2025").data("ionRangeSlider").result;
@@ -153,7 +153,7 @@ async function filterScene() {
     const lighting2050 = $("#sliderLighting2050").data("ionRangeSlider").result;
     const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
 
-    // --- IOD sliderlar˝ (string) ---
+    // --- IOD sliderlarƒ± (string) ---
     const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
     const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
 
@@ -165,7 +165,7 @@ async function filterScene() {
     const query = activeLayer.createQuery();
     query.returnGeometry = true;
 
-    // --- where ko˛ulu ---
+    // --- where ko≈üulu ---
     query.where = `
         Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
         Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
@@ -188,17 +188,17 @@ async function filterScene() {
 
     if (!result.features || result.features.length === 0) {
         activeLayer.definitionExpression = "1=0";
-        console.log("SonuÁ bulunamad˝, layer bo˛ gˆsteriliyor.");
+        console.log("Sonu√ß bulunamadƒ±, layer bo≈ü g√∂steriliyor.");
         return;
     }
 
     const objectIds = result.features.map(f => f.attributes.OBJECTID);
     activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
 
-    console.log("Toplam highlight edilen OBJECTID say˝s˝:", objectIds.length);
+    console.log("Toplam highlight edilen OBJECTID sayƒ±sƒ±:", objectIds.length);
     //console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
 }
-// --- Sliderlar˝n min/max deerlerini WebScene layer'lar˝ndan al ---
+// --- Sliderlarƒ±n min/max deƒüerlerini WebScene layer'larƒ±ndan al ---
 async function getFieldMinMax(layer, field) {
     const query = layer.createQuery();
     query.returnGeometry = false;
@@ -208,14 +208,14 @@ async function getFieldMinMax(layer, field) {
     ];
     const result = await layer.queryFeatures(query);
     if (!result.features || result.features.length === 0) {
-        //console.warn("Field bulunamad˝ veya feature yok:", field, "in layer:", layer.title);
+        //console.warn("Field bulunamadƒ± veya feature yok:", field, "in layer:", layer.title);
         return { min: 0, max: 2 };
     }
 
     const stats = result.features[0].attributes;
     return { min: stats.minVal ?? 0, max: stats.maxVal ?? 2 };
 }
-// --- Sliderlar˝ ba˛lat ---
+// --- Sliderlarƒ± ba≈ülat ---
 async function initSliders(groupLayer) {
     const sliders = [
         { id: "#uwallSlider", field: "Uwall", layerName: "Uwall" },
@@ -298,7 +298,7 @@ function clearHighlighting() {
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
     const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
     if (activeLayer) {
-        activeLayer.definitionExpression = null; // b¸t¸n veriler geri gelir
+        activeLayer.definitionExpression = null; // b√ºt√ºn veriler geri gelir
     }
 }
 
@@ -306,12 +306,12 @@ function enableFeatureTableRowClick(table) {
     table.on("row-click", function (event) {
         const objectId = event.row.data.OBJECTID;
         if (!objectId) {
-            console.warn("OBJECTID bulunamad˝!");
+            console.warn("OBJECTID bulunamadƒ±!");
             return;
         }
 
         view.whenLayerView(table.layer).then(layerView => {
-            // ÷nce varsa eski highlight'˝ kald˝r
+            // √ñnce varsa eski highlight'ƒ± kaldƒ±r
             if (highlight) {
                 highlight.remove();
             }
@@ -328,7 +328,7 @@ function enableFeatureTableRowClick(table) {
                 if (result.features.length > 0 && result.features[0].geometry) {
                     const geom = result.features[0].geometry;
 
-                    // SceneView'da extent ile gitmek genellikle daha g¸venli
+                    // SceneView'da extent ile gitmek genellikle daha g√ºvenli
                     let target;
                     if (geom.type === "point") {
                         target = geom;
@@ -338,8 +338,8 @@ function enableFeatureTableRowClick(table) {
 
                     view.goTo({
                         target: target,
-                        tilt: 60,    // istee bal˝, daha iyi 3D gˆr¸n¸m
-                        zoom: 17     // istee bal˝, SceneView'da scale yerine zoom
+                        tilt: 60,    // isteƒüe baƒülƒ±, daha iyi 3D g√∂r√ºn√ºm
+                        zoom: 17     // isteƒüe baƒülƒ±, SceneView'da scale yerine zoom
                     }).catch(err => console.error(err));
                 }
             });
@@ -351,7 +351,7 @@ function enableFeatureTableRowClick(table) {
 $("#btnFilterClear").on("click", function () {
 
 
-    //// T¸m sliderlar˝ resetle
+    //// T√ºm sliderlarƒ± resetle
     const sliders = [
         "#uwallSlider",
         "#uwindowSlider",
@@ -378,39 +378,6 @@ $("#btnFilterClear").on("click", function () {
     });
 
     clearHighlighting();
-});
-
-$("#btnScenario").on("click", function () {
-    window.location.href = "/Home/Scenario";
-});
-
-document.getElementById("btnScenario").addEventListener("click", function () {
-    var scenarioData = {
-        objectIdList: oidd,  // oidd burada daha ˆnce tan˝mlanm˝˛ olmal˝
-        selectedYear: document.getElementById("yearDropdown").value,
-        function_: document.getElementById("functionSlider").value,
-        uwall: document.getElementById("uwallSlider").value,
-        uwindow: document.getElementById("uwindowSlider").value,
-        uroof: document.getElementById("uroofSlider").value,
-        uground: document.getElementById("ugroundSlider").value,
-        shgc: document.getElementById("shgcSlider").value,
-        infiltration: document.getElementById("infiltrationSlider").value,
-    };
-
-    //// varsa onceki senaryoyu al
-    let storedScenarios = JSON.parse(localStorage.getItem("scenarios")) || [];
-
-    if (storedScenarios.length >= 3) { // Eer 3 senaryo varsa
-        storedScenarios.shift(); // En eski senaryoyu sil
-    }
-
-    storedScenarios.push(scenarioData);
-
-    localStorage.setItem("scenarios", JSON.stringify(storedScenarios));
-
-    // Toast mesaj˝n˝ gˆster
-    let toast = new bootstrap.Toast(document.getElementById('successToast'));
-    toast.show();
 });
 
 function toggle_full_screen() {
@@ -446,7 +413,7 @@ function toggle_full_screen() {
 
 function toggleFeatureTable() {
     document.getElementById("mapContainer").style.height = "100vh";
-    document.getElementById("mainContainer").style.display = "none";
+    document.getElementById("tableContainer").style.display = "none";
 
 }
 
@@ -484,9 +451,11 @@ function setActiveWidget(type) {
             //showFilter();
             setActiveButton(document.getElementById("btnFiltre"));
             break;
+
         case "fullscreen":
             toggle_full_screen();
             break;
+
         case "basemaps":
             activeWidget = new BasemapGallery({
                 view: view,
@@ -511,6 +480,7 @@ function setActiveWidget(type) {
             view.ui.add(activeWidget, "top-right");
             setActiveButton(document.getElementById("btnMeasureLine"));
             break;
+
         case "area":
             activeWidget = new AreaMeasurement3D({
                 view: view
@@ -556,22 +526,22 @@ function setActiveWidget(type) {
 
         case "FeatureTable":
             var div = document.createElement("div");
-            div.id = "tableDiv";
+            div.id = "FtableDiv";
             div.style.height = "50vh";
             div.style.width = "100%";
 
-            var conDiv = document.getElementById("mainContainer");
-            conDiv.innerHTML = ""; // ˆnceki tabloyu temizle
+            var conDiv = document.getElementById("tableContainer");
+            conDiv.innerHTML = ""; // √∂nceki tabloyu temizle
             conDiv.appendChild(div);
 
             // Aktif Layer'i bul
             const groupLayersss = view.map.layers.find(l => l.title === "Envelope Properties");
 
-            // GroupLayer alt˝ndaki ilk gˆr¸n¸r FeatureLayeríi bul
+            // GroupLayer altƒ±ndaki ilk g√∂r√ºn√ºr FeatureLayer‚Äôi bul
             const activeLayer = groupLayersss.layers.find(l => l.visible && l.type === "feature");
 
             if (!activeLayer) {
-                alert("Tablosu aÁ˝lacak aktif FeatureLayer yok!");
+                alert("Tablosu a√ßƒ±lacak aktif FeatureLayer yok!");
                 break;
             }
 
@@ -587,7 +557,7 @@ function setActiveWidget(type) {
                 },
             });
 
-            document.getElementById("mainContainer").style.display = "block";
+            document.getElementById("tableContainer").style.display = "block";
             document.getElementById("mapContainer").style.height = "50vh";
 
             setActiveButton(document.getElementById("btnFeatureTable"));
@@ -648,9 +618,120 @@ function updateYearContent() {
 // Event binding
 if (yearDropdown) {
     yearDropdown.addEventListener("change", updateYearContent);
-    // aÁ˝l˝˛ta bir kere Áal˝˛t˝r
+    // a√ßƒ±lƒ±≈üta bir kere √ßalƒ±≈ütƒ±r
     updateYearContent();
 }
 
+const btnScenario = document.getElementById("btnScenario");
+const scenarioContainer = document.getElementById("scenarioContainer");
+const mapContainer = document.getElementById("mapContainer");
 
+btnScenario.addEventListener("click", async () => {
+    const isOpen = scenarioContainer.style.width && scenarioContainer.style.width !== "0px";
 
+    if (isOpen) {
+        // Scenario panel kapatma
+        scenarioContainer.style.width = "0";
+        mapContainer.style.height = "";
+        mapContainer.style.flex = "1";
+
+    } else {
+        // Panel a√ß
+        scenarioContainer.style.width = "900px"; // panel geni≈üliƒüi
+        mapContainer.style.flex = "1 1 calc(100% - 900px)"; // harita k√º√ß√ºl√ºyor
+
+        // Ajax ile i√ßerik y√ºkle
+        const response = await fetch("/Home/Scenario");
+        const html = await response.text();
+        scenarioContainer.innerHTML = html;
+
+        drawScenarioCharts();
+    }
+});
+
+function drawScenarioCharts() {
+    // === PIE CHART ===
+    const pieCanvas = document.querySelector("#pieChart");
+    if (pieCanvas) {
+        const pieChart = new ApexCharts(pieCanvas, {
+            chart: {
+                type: 'pie',
+                height: 263,
+                background: '#fff'
+            },
+            series: [10, 20, 30, 40],
+            labels: ["A", "B", "C", "D"],
+            colors: ["#ff6384", "#36a2eb", "#cc65fe", "#ffce56"],
+            legend: { position: 'bottom' },
+            title: { text: 'Sample Pie Chart' }
+        });
+        pieChart.render();
+    }
+
+    // === BOX PLOT (Bar taklidi) ===
+    const boxPlotCanvas = document.querySelector("#boxPlotChart");
+    if (boxPlotCanvas) {
+        const boxPlotChart = new ApexCharts(boxPlotCanvas, {
+            chart: {
+                type: 'bar',
+                height: 250,
+                background: '#fff'
+            },
+            series: [{
+                name: 'Values',
+                data: [12, 19, 7]
+            }],
+            xaxis: { categories: ["Set 1", "Set 2", "Set 3"] },
+            colors: ["#4bc0c0"],
+            title: { text: 'Sample Box Plot (Bar Chart)' }
+        });
+        boxPlotChart.render();
+    }
+
+    // === SCATTER ===
+    const scatterCanvas = document.querySelector("#scatterChart");
+    if (scatterCanvas) {
+        const scatterChart = new ApexCharts(scatterCanvas, {
+            chart: {
+                type: 'scatter',
+                height: 250,
+                background: '#fff'
+            },
+            series: [{
+                name: "Random Points",
+                data: [
+                    [-10, 0],
+                    [-5, 5],
+                    [0, 10],
+                    [5, 5],
+                    [10, 0]
+                ]
+            }],
+            colors: ["#ff6384"],
+            xaxis: { tickAmount: 5 },
+            yaxis: { tickAmount: 5 }
+        });
+        scatterChart.render();
+    }
+
+    // === BAR CHART ===
+    const barCanvas = document.querySelector("#barChart");
+    if (barCanvas) {
+        const barChart = new ApexCharts(barCanvas, {
+            chart: {
+                type: 'bar',
+                height: 250,
+                background: '#fff'
+            },
+            series: [{
+                name: 'Votes',
+                data: [12, 19, 3, 5, 2]
+            }],
+            xaxis: {
+                categories: ["Red", "Blue", "Yellow", "Green", "Purple"]
+            },
+            colors: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"]
+        });
+        barChart.render();
+    }
+}
