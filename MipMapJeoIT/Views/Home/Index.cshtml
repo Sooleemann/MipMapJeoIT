@@ -1,4 +1,4 @@
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+ï»¿@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     ViewData["Title"] = "Home Page";
     Layout = null;
@@ -22,12 +22,28 @@
     <link href="~/css/site.css" asp-append-version="true" rel="stylesheet" />
     <link rel="shortcut icon" href="/favicon.ico">
 
+
+    
+
     <style>
+
+        html, body {
+            height: 100%;
+        }
+     
+        #scenarioContainer, #mapContainer {
+            min-height: 0;
+            min-width: 0;
+        }
+          
+            #scenarioContainer.open {
+                width: 900px !important;
+            }
         body {
             padding: 0;
             margin: 0;
             height: 100%;
-/*             overflow: hidden; */
+
         }
 
         #toolbarDiv {
@@ -76,9 +92,9 @@
                         </button>
                     </li>
                     <li class="nav-item  pe-lg-1">
-                        <button type="button" id="btnBaseMaps" data-widget="basemaps" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Altlýklar">
+                        <button type="button" id="btnBaseMaps" data-widget="basemaps" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="AltlÃ½klar">
                             <i class="fab fa-windows text-light"></i>
-                            <span class="d-inline-block d-lg-none text-light">Altlýk</span>
+                            <span class="d-inline-block d-lg-none text-light">AltlÃ½k</span>
                         </button>
                     </li>
                     <li class="nav-item  pe-lg-1">
@@ -89,21 +105,21 @@
                     </li>
                     <li class="nav-item pe-lg-1">
 
-                        <button type="button" id="btnMeasureLine" data-widget="distance" data-button="toolbar" class="btn btn-outline-tanap" data-bs-toggle="tooltip" title="Uzunluk ölçümü">
+                        <button type="button" id="btnMeasureLine" data-widget="distance" data-button="toolbar" class="btn btn-outline-tanap" data-bs-toggle="tooltip" title="Uzunluk Ã¶lÃ§Ã¼mÃ¼">
                             <i class="fas fa-ruler text-light"></i>
-                            <span class="d-inline-block d-lg-none text-light">Mesafe Ölçüm</span>
+                            <span class="d-inline-block d-lg-none text-light">Mesafe Ã–lÃ§Ã¼m</span>
                         </button>
                     </li>
                     <li class="nav-item  pe-lg-1">
-                        <button type="button" id="btnMeasurePoly" data-widget="area" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Alan Ölçümü">
+                        <button type="button" id="btnMeasurePoly" data-widget="area" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Alan Ã–lÃ§Ã¼mÃ¼">
                             <i class="fas fa-draw-polygon text-light"></i>
-                            <span class="d-inline-block d-lg-none text-light">Alan Ölçüm</span>
+                            <span class="d-inline-block d-lg-none text-light">Alan Ã–lÃ§Ã¼m</span>
                         </button>
                     </li>
                     <li class="nav-item pe-lg-1">
-                        <button type="button" id="btnMeasureProfile" data-widget="profile" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="Yükseklik Profili">
+                        <button type="button" id="btnMeasureProfile" data-widget="profile" data-button="toolbar" class="btn btn-outline-tanap " data-bs-toggle="tooltip" title="YÃ¼kseklik Profili">
                             <i class="esri-icon-elevation-profile text-light"></i>
-                            <span class="d-inline-block d-lg-none text-light">Yükseklik Profili</span>
+                            <span class="d-inline-block d-lg-none text-light">YÃ¼kseklik Profili</span>
                         </button>
                     </li>
                     <li class="nav-item pe-lg-1">
@@ -148,7 +164,7 @@
         </div>
     </nav>
 
-    <!--Filtre popupý-->
+    <!--Filtre popupÃ½-->
     <div class="offcanvas offcanvas-end text-bg-dark offcanvas-transparent" data-bs-backdrop="false" tabindex="-1" id="drawerFilter" aria-labelledby="layerOffcanvasLabel">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title" id="layerOffcanvasLabel">Filtre Uygula</h5>
@@ -346,12 +362,14 @@
     <div class="containerTable" id="tableContainer" style="display: none;"></div> *@
 
     <div class="d-flex flex-column" style="height: 100vh;">
-        <div class="d-flex" style="flex: 1;">
+        <div class="d-flex" style="flex: 1; min-height: 0;">
+     
             <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;"></div>
-            <div id="mapContainer" style="flex: 1;"></div>
+            <div id="mapContainer" style="flex: 1; min-height: 0; min-width: 0;"></div> <!-- <= buraya da -->
         </div>
         <div class="containerTable" id="tableContainer" style="display: none; height: 50vh;"></div>
     </div>
+
 
 
    @* <div class="d-flex flex-column" style="height: 100vh;">
@@ -423,7 +441,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button saÃ°da -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario2BaseEnve" id="enveOption2">
@@ -465,7 +483,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button saÃ°da -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario3BaseEnve" id="enveOption3">
@@ -507,7 +525,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button saÃ°da -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario4BaseEnve" id="enveOption4">

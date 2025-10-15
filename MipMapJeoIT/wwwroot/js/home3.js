@@ -624,30 +624,42 @@ if (yearDropdown) {
 
 const btnScenario = document.getElementById("btnScenario");
 const scenarioContainer = document.getElementById("scenarioContainer");
-const mapContainer = document.getElementById("mapContainer");
+
+function forceViewResize() {
+ 
+    const v = window.view || window.sceneView || window.mapView;
+    
+    try { v && typeof v.resize === "function" && v.resize(); } catch { }
+    window.dispatchEvent(new Event("resize"));
+}
 
 btnScenario.addEventListener("click", async () => {
-    const isOpen = scenarioContainer.style.width && scenarioContainer.style.width !== "0px";
+    const isOpen = scenarioContainer.classList.contains("open");
 
     if (isOpen) {
-        // Scenario panel kapatma
-        scenarioContainer.style.width = "0";
-        mapContainer.style.height = "";
-        mapContainer.style.flex = "1";
-
+      
+        scenarioContainer.classList.remove("open");
+      
+        requestAnimationFrame(forceViewResize);
     } else {
-        // Panel aç
-        scenarioContainer.style.width = "900px"; // panel genişliği
-        mapContainer.style.flex = "1 1 calc(100% - 900px)"; // harita küçülüyor
+       
+        scenarioContainer.classList.add("open");
 
-        // Ajax ile içerik yükle
-        const response = await fetch("/Home/Scenario");
-        const html = await response.text();
-        scenarioContainer.innerHTML = html;
-
-        drawScenarioCharts();
+        
+        try {
+            const response = await fetch("/Home/Scenario");
+            const html = await response.text();
+            scenarioContainer.innerHTML = html;
+            
+            if (typeof drawScenarioCharts === "function") drawScenarioCharts();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            requestAnimationFrame(forceViewResize);
+        }
     }
 });
+
 
 function drawScenarioCharts() {
     // === PIE CHART ===
