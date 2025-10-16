@@ -18,15 +18,10 @@
     <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body>
-    <style>
-        .chart-canvas {
-            max-height: 250px; /* hepsi aynı yükseklikte olacak */
-        }
-    </style>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 
-    <div class="container py-4 mt-5 mb-5">
+    <div class="container py-4 mt-5 mb-1">
         <div class="row g-3">
             <!-- Scenario 1 -->
             <div class="col-md-3">
@@ -64,7 +59,6 @@
                                     <input type="radio" name="scenario1BaseEnve" id="enveOption1">
                                     <label for="enveOption1" class="mb-0">Enve</label>
                                 </div>
-                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
                     </div>
@@ -106,7 +100,6 @@
                                     <input type="radio" name="scenario2BaseEnve" id="enveOption2">
                                     <label for="enveOption2" class="mb-0">Enve</label>
                                 </div>
-                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
                     </div>
@@ -148,7 +141,6 @@
                                     <input type="radio" name="scenario3BaseEnve" id="enveOption3">
                                     <label for="enveOption3" class="mb-0">Enve</label>
                                 </div>
-                                <button class="btn btn-light btn-sm">Create</button>
                             </div>
                         </div>
                     </div>
@@ -190,37 +182,25 @@
                                     <input type="radio" name="scenario4BaseEnve" id="enveOption4">
                                     <label for="enveOption4" class="mb-0">Enve</label>
                                 </div>
-                                <button class="btn btn-dark btn-sm">Create</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-
+            <div class="mt-4 text-center">
+                <button id="btnCreateScenarios" class="btn btn-primary btn-lg">Create All Scenarios</button>
+            </div>
         </div>
     </div>
 
-    <div class="container py-4 mt-1">
+    <div class="container py-4">
         <div class="row">
-            <!-- Pie Chart -->
-            <div class="col-md-6 mb-4">
-                <div class="border rounded p-2">
-                    <div id="pieChart"></div>
-                </div>
-            </div>
 
-            <!-- Boxplot -->
+            <!-- Radial Bar Chart -->
             <div class="col-md-6 mb-4">
                 <div class="border rounded p-2">
-                    <div id="boxPlotChart"></div>
-                </div>
-            </div>
-
-            <!-- Scatter -->
-            <div class="col-md-6 mb-4">
-                <div class="border rounded p-2">
-                    <div id="scatterChart"></div>
+                    <div id="radialBarChart"></div>
                 </div>
             </div>
 
@@ -230,7 +210,23 @@
                     <div id="barChart"></div>
                 </div>
             </div>
+
+            <!-- Radar Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="border rounded p-2">
+                    <div id="radarChart"></div>
+                </div>
+            </div>
+
+            <!-- Boxplot Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="border rounded p-2">
+                    <div id="boxPlotChart"></div>
+                </div>
+            </div>
+
         </div>
+
     </div>
 
 </body>

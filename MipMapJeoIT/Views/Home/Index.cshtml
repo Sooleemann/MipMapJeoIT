@@ -351,49 +351,34 @@
         </div>
     </div>
 
-@*     <div class="d-flex" style="height: 100vh;">
-        <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;"></div>
-        <div id="mapContainer" style="flex: 1;">
-
-        </div>
-    </div>
-
-    <!--AttributeTable-->
-    <div class="containerTable" id="tableContainer" style="display: none;"></div> *@
-
     <div class="d-flex flex-column" style="height: 100vh;">
         <div class="d-flex" style="flex: 1; min-height: 0;">
      
-            <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;"></div>
-            <div id="mapContainer" style="flex: 1; min-height: 0; min-width: 0;"></div> <!-- <= buraya da -->
-        </div>
-        <div class="containerTable" id="tableContainer" style="display: none; height: 50vh;"></div>
-    </div>
-
-
-
-   @* <div class="d-flex flex-column" style="height: 100vh;">
-        <div class="d-flex" style="flex: 1;">
-            <!-- Scenario Panel -->
             <div id="scenarioContainer" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;">
-                <div class="container py-4">
+                <div class="container py-4 mt-5 mb-1">
                     <div class="row g-3">
                         <!-- Scenario 1 -->
                         <div class="col-md-3">
                             <div class="card text-white bg-danger">
                                 <div class="card-body">
                                     <h5 class="card-title">Scenario 1: 2025_Base_Qheating</h5>
+
+                                    <!-- Year Dropdown -->
                                     <p>
                                         Year:
-                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                        <select id="yearSelect1" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                                             <option value="2025" selected>2025</option>
                                             <option value="2050">2050</option>
                                         </select>
                                     </p>
+
+                                    <!-- Base / Enve with HP/PV -->
                                     <div class="mt-2">
                                         <div class="d-flex align-items-center">
                                             <input type="radio" name="scenario1BaseEnve" id="baseOption1" checked>
                                             <label for="baseOption1" class="mb-0 ms-1 me-3">Base</label>
+
+                                            <!-- HP / PV only for Base -->
                                             <div class="d-flex align-items-center">
                                                 <input type="checkbox" id="hpOption1">
                                                 <label for="hpOption1" class="mb-0 ms-1 me-2">HP</label>
@@ -401,17 +386,19 @@
                                                 <label for="pvOption1" class="mb-0 ms-1">PV</label>
                                             </div>
                                         </div>
+
+                                        <!-- Enve + Button sağda -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario1BaseEnve" id="enveOption1">
                                                 <label for="enveOption1" class="mb-0">Enve</label>
                                             </div>
-                                            <button class="btn btn-light btn-sm">Create</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                         <!-- Scenario 2 -->
                         <div class="col-md-3">
                             <div class="card text-white bg-primary">
@@ -421,7 +408,7 @@
                                     <!-- Year Dropdown -->
                                     <p>
                                         Year:
-                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                        <select id="yearSelect2" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                                             <option value="2025" selected>2025</option>
                                             <option value="2050">2050</option>
                                         </select>
@@ -434,20 +421,19 @@
                                             <label for="baseOption2" class="mb-0 ms-1 me-3">Base</label>
 
                                             <div class="d-flex align-items-center">
-                                                <input type="checkbox" id="hpOption2">
+                                                <input type="checkbox" checked id="hpOption2">
                                                 <label for="hpOption2" class="mb-0 ms-1 me-2">HP</label>
                                                 <input type="checkbox" id="pvOption2">
                                                 <label for="pvOption2" class="mb-0 ms-1">PV</label>
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button sağda -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario2BaseEnve" id="enveOption2">
                                                 <label for="enveOption2" class="mb-0">Enve</label>
                                             </div>
-                                            <button class="btn btn-light btn-sm">Create</button>
                                         </div>
                                     </div>
                                 </div>
@@ -463,7 +449,7 @@
                                     <!-- Year Dropdown -->
                                     <p>
                                         Year:
-                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                        <select id="yearSelect3" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                                             <option value="2025" selected>2025</option>
                                             <option value="2050">2050</option>
                                         </select>
@@ -478,18 +464,17 @@
                                             <div class="d-flex align-items-center">
                                                 <input type="checkbox" id="hpOption3">
                                                 <label for="hpOption3" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" id="pvOption3">
+                                                <input type="checkbox" checked id="pvOption3">
                                                 <label for="pvOption3" class="mb-0 ms-1">PV</label>
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button sağda -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario3BaseEnve" id="enveOption3">
                                                 <label for="enveOption3" class="mb-0">Enve</label>
                                             </div>
-                                            <button class="btn btn-light btn-sm">Create</button>
                                         </div>
                                     </div>
                                 </div>
@@ -505,7 +490,7 @@
                                     <!-- Year Dropdown -->
                                     <p>
                                         Year:
-                                        <select class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                        <select id="yearSelect4" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                                             <option value="2025" selected>2025</option>
                                             <option value="2050">2050</option>
                                         </select>
@@ -518,48 +503,38 @@
                                             <label for="baseOption4" class="mb-0 ms-1 me-3">Base</label>
 
                                             <div class="d-flex align-items-center">
-                                                <input type="checkbox" id="hpOption4">
+                                                <input type="checkbox" checked id="hpOption4">
                                                 <label for="hpOption4" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" id="pvOption4">
+                                                <input type="checkbox" checked id="pvOption4">
                                                 <label for="pvOption4" class="mb-0 ms-1">PV</label>
                                             </div>
                                         </div>
 
-                                        <!-- Enve + Button saðda -->
+                                        <!-- Enve + Button sağda -->
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <div>
                                                 <input type="radio" name="scenario4BaseEnve" id="enveOption4">
                                                 <label for="enveOption4" class="mb-0">Enve</label>
                                             </div>
-                                            <button class="btn btn-dark btn-sm">Create</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <div class="mt-4 text-center">
+                            <button id="btnCreateScenarios" class="btn btn-primary btn-lg">Create All Scenarios</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="container py-4 mt-1">
+                <div class="container py-4">
                     <div class="row">
-                        <!-- Pie Chart -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-2">
-                                <div id="pieChart"></div>
-                            </div>
-                        </div>
 
-                        <!-- Boxplot -->
+                        <!-- Radial Bar Chart -->
                         <div class="col-md-6 mb-4">
                             <div class="border rounded p-2">
-                                <div id="boxPlotChart"></div>
-                            </div>
-                        </div>
-
-                        <!-- Scatter -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-2">
-                                <div id="scatterChart"></div>
+                                <div id="radialBarChart"></div>
                             </div>
                         </div>
 
@@ -569,17 +544,29 @@
                                 <div id="barChart"></div>
                             </div>
                         </div>
+
+                        <!-- Radar Chart -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="radarChart"></div>
+                            </div>
+                        </div>
+
+                        <!-- Boxplot Chart -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="boxPlotChart"></div>
+                            </div>
+                        </div>
+
                     </div>
+
                 </div>
             </div>
-
-            <!-- Harita -->
-            <div id="mapContainer" style="flex: 1;"></div>
+            <div id="mapContainer" style="flex: 1; min-height: 0; min-width: 0;"></div> <!-- <= buraya da -->
         </div>
         <div class="containerTable" id="tableContainer" style="display: none; height: 50vh;"></div>
-    </div> *@
-
-
+    </div>
 
     <script src="~/js/turf.min.js"></script>
     <link href="~/lib/ion-rangeslider/ion.rangeSlider.min.css" rel="stylesheet" />

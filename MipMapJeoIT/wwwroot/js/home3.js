@@ -380,7 +380,7 @@ $("#btnFilterClear").on("click", function () {
     clearHighlighting();
 });
 
-function toggle_full_screen() {
+function toggle_full_sceen() {
     if ((document.fullScreenElement && document.fullScreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
         if (document.documentElement.requestFullScreen) {
             document.documentElement.requestFullScreen();
@@ -549,6 +549,7 @@ function setActiveWidget(type) {
                 returnGeometryEnabled: true,
                 view: view,
                 layer: activeLayer,
+                hiddenFields: ["Shape__Length", "Shape__Area","OBJECTID"],
                 container: div,
                 actionColumnConfig: {
                     label: "Zoom to feature",
@@ -633,103 +634,61 @@ function forceViewResize() {
     window.dispatchEvent(new Event("resize"));
 }
 
-btnScenario.addEventListener("click", async () => {
+btnScenario.addEventListener("click", () => {
     const isOpen = scenarioContainer.classList.contains("open");
 
     if (isOpen) {
-      
         scenarioContainer.classList.remove("open");
-      
         requestAnimationFrame(forceViewResize);
     } else {
-       
         scenarioContainer.classList.add("open");
-
-        
-        try {
-            const response = await fetch("/Home/Scenario");
-            const html = await response.text();
-            scenarioContainer.innerHTML = html;
-            
-            if (typeof drawScenarioCharts === "function") drawScenarioCharts();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            requestAnimationFrame(forceViewResize);
-        }
+        if (typeof drawScenarioCharts === "function") drawScenarioCharts();
+        requestAnimationFrame(forceViewResize);
     }
 });
 
 
+// === GLOBAL CHART REFERANSLARI ===
+let radialBarChart;
+let barChart;
+let radarChart;
+let boxPlotChart;
+
 function drawScenarioCharts() {
-    // === PIE CHART ===
-    const pieCanvas = document.querySelector("#pieChart");
-    if (pieCanvas) {
-        const pieChart = new ApexCharts(pieCanvas, {
+    // === RADIAL BAR CHART ===
+    const radialBarCanvas = document.querySelector("#radialBarChart");
+    if (radialBarCanvas) {
+        radialBarChart = new ApexCharts(radialBarCanvas, {
             chart: {
-                type: 'pie',
-                height: 263,
-                background: '#fff'
-            },
-            series: [10, 20, 30, 40],
-            labels: ["A", "B", "C", "D"],
-            colors: ["#ff6384", "#36a2eb", "#cc65fe", "#ffce56"],
-            legend: { position: 'bottom' },
-            title: { text: 'Sample Pie Chart' }
-        });
-        pieChart.render();
-    }
-
-    // === BOX PLOT (Bar taklidi) ===
-    const boxPlotCanvas = document.querySelector("#boxPlotChart");
-    if (boxPlotCanvas) {
-        const boxPlotChart = new ApexCharts(boxPlotCanvas, {
-            chart: {
-                type: 'bar',
+                type: 'radialBar',
                 height: 250,
                 background: '#fff'
             },
-            series: [{
-                name: 'Values',
-                data: [12, 19, 7]
-            }],
-            xaxis: { categories: ["Set 1", "Set 2", "Set 3"] },
-            colors: ["#4bc0c0"],
-            title: { text: 'Sample Box Plot (Bar Chart)' }
-        });
-        boxPlotChart.render();
-    }
-
-    // === SCATTER ===
-    const scatterCanvas = document.querySelector("#scatterChart");
-    if (scatterCanvas) {
-        const scatterChart = new ApexCharts(scatterCanvas, {
-            chart: {
-                type: 'scatter',
-                height: 250,
-                background: '#fff'
+            series: [70], // ilk değer
+            labels: ["Mean"],
+            colors: ["#36a2eb"],
+            plotOptions: {
+                radialBar: {
+                    hollow: { size: '50%' },
+                    dataLabels: {
+                        name: { fontSize: '14px' },
+                        value: { fontSize: '20px', formatter: val => val + "%" }
+                    }
+                }
             },
-            series: [{
-                name: "Random Points",
-                data: [
-                    [-10, 0],
-                    [-5, 5],
-                    [0, 10],
-                    [5, 5],
-                    [10, 0]
-                ]
-            }],
-            colors: ["#ff6384"],
-            xaxis: { tickAmount: 5 },
-            yaxis: { tickAmount: 5 }
+            total: {
+                show: true,
+                label: 'Mean',
+            },
+            title: { text: 'Radial Bar Chart' }
         });
-        scatterChart.render();
+        radialBarChart.render();
     }
 
     // === BAR CHART ===
     const barCanvas = document.querySelector("#barChart");
     if (barCanvas) {
-        const barChart = new ApexCharts(barCanvas, {
+        barChart = new ApexCharts(barCanvas, {
             chart: {
                 type: 'bar',
                 height: 250,
@@ -742,8 +701,228 @@ function drawScenarioCharts() {
             xaxis: {
                 categories: ["Red", "Blue", "Yellow", "Green", "Purple"]
             },
-            colors: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"]
+            colors: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"],
+            title: { text: 'Bar Chart' }
         });
         barChart.render();
     }
+
+    // === RADAR CHART ===
+    const radarCanvas = document.querySelector("#radarChart");
+    if (radarCanvas) {
+        radarChart = new ApexCharts(radarCanvas, {
+            chart: {
+                type: 'radar',
+                height: 250,
+                background: '#fff'
+            },
+            series: [{
+                name: 'Series 1',
+                data: [80, 50, 30, 40, 100, 20]
+            }],
+            labels: ["January", "February", "March", "April", "May", "June"],
+            colors: ["#ff6384"],
+            title: { text: 'Radar Chart' }
+        });
+        radarChart.render();
+    }
+
+    // === BOX PLOT ===
+    const boxPlotCanvas = document.querySelector("#boxPlotChart");
+    if (boxPlotCanvas) {
+        boxPlotChart = new ApexCharts(boxPlotCanvas, {
+            chart: {
+                type: 'boxPlot',
+                height: 250,
+                background: '#fff'
+            },
+            series: [{
+                name: 'Box',
+                data: [
+                    { x: 'Set 1', y: [10, 15, 25, 35, 40] },
+                    { x: 'Set 2', y: [5, 7, 10, 12, 15] },
+                    { x: 'Set 3', y: [15, 20, 30, 40, 50] }
+                ]
+            }],
+            colors: ["#4bc0c0"],
+            title: { text: 'Boxplot Chart' }
+        });
+        boxPlotChart.render();
+    }
 }
+
+function getAllScenarioValues() {
+    const scenarios = [];
+
+    for (let i = 1; i <= 4; i++) {
+        const yearSelect = document.querySelector(`#yearSelect${i}`);
+        const selectedYear = yearSelect ? yearSelect.value : null;
+
+        const baseRadio = document.querySelector(`#baseOption${i}`);
+        const enveRadio = document.querySelector(`#enveOption${i}`);
+        let selectedType = null;
+        if (baseRadio?.checked) selectedType = 'BASE';
+        else if (enveRadio?.checked) selectedType = 'Enve';
+
+        const hpCheckbox = document.querySelector(`#hpOption${i}`);
+        const pvCheckbox = document.querySelector(`#pvOption${i}`);
+        const hpSelected = hpCheckbox?.checked || false;
+        const pvSelected = pvCheckbox?.checked || false;
+
+        scenarios.push({
+            year: selectedYear,
+            type: selectedType,
+            hp: hpSelected,
+            pv: pvSelected
+        });
+    }
+
+    console.log(scenarios);
+    return scenarios;
+}
+
+async function updateScenarioCharts() {
+    const scenarios = getAllScenarioValues(); // 4 senaryoyu al
+    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    if (!groupLayer) return console.warn("Group layer bulunamadı.");
+
+    const currentLayer = groupLayer.layers.find(l => l.visible);
+    if (!currentLayer) return console.warn("Görünür layer bulunamadı.");
+
+    const means = [];
+    const boxStats = []; // BoxPlot için [min, q1, median, q3, max] dizilerini tutacak
+    const scenarioLabels = [];
+
+    for (let i = 0; i < scenarios.length; i++) {
+        const values = scenarios[i];
+
+        // === Field adı oluştur ===
+        let fieldName = `F${values.year}_${values.type}`;
+        if (values.hp && values.pv) fieldName += "_HP_PV";
+        else if (values.hp) fieldName += "_HP";
+        else if (values.pv) fieldName += "_PV";
+        fieldName += "_Qheating";
+
+        // === Label oluştur ===
+        let label = `${values.year} ${values.type}`;
+        if (values.hp && values.pv) label += " (HP+PV)";
+        else if (values.hp) label += " (HP)";
+        else if (values.pv) label += " (PV)";
+        scenarioLabels.push(label);
+
+        // === Field kontrol ===
+        const exists = currentLayer.fields.some(f => f.name === fieldName);
+        if (!exists) {
+            console.warn(`Scenario ${i + 1}: Field mevcut değil ->`, fieldName);
+            means.push(null);
+            boxStats.push([0, 0, 0, 0, 0]);
+            continue;
+        }
+
+        try {
+            // === İstatistik sorgusu (mean, min, max, std) ===
+            const statQuery = currentLayer.createQuery();
+            statQuery.outStatistics = [
+                { onStatisticField: fieldName, outStatisticFieldName: "mean_value", statisticType: "avg" },
+                { onStatisticField: fieldName, outStatisticFieldName: "min_value", statisticType: "min" },
+                { onStatisticField: fieldName, outStatisticFieldName: "max_value", statisticType: "max" },
+                { onStatisticField: fieldName, outStatisticFieldName: "stddev_value", statisticType: "stddev" }
+            ];
+
+            const statResult = await currentLayer.queryFeatures(statQuery);
+            const attrs = statResult.features[0]?.attributes ?? {};
+
+            // --- Mean bar & radial ---
+            const meanValue = attrs.mean_value ?? null;
+            const roundedMean = meanValue !== null ? parseFloat(meanValue.toFixed(2)) : null;
+            means.push(roundedMean);
+
+            // --- BoxPlot ---
+            const min = attrs.min_value ?? 0;
+            const max = attrs.max_value ?? 0;
+            const median = meanValue ?? 0;
+            const std = attrs.stddev_value ?? 0;
+            const q1 = median - std;
+            const q3 = median + std;
+            boxStats.push([parseFloat(min.toFixed(2)), parseFloat(q1.toFixed(2)), parseFloat(median.toFixed(2)), parseFloat(q3.toFixed(2)), parseFloat(max.toFixed(2))]);
+
+        } catch (err) {
+            console.error(`Scenario ${i + 1} hata:`, err);
+            means.push(null);
+            boxStats.push([0, 0, 0, 0, 0]);
+        }
+    }
+
+    const colors = ["#4CAF50", "#2196F3", "#FF9800", "#E91E63"];
+
+    // --- Radial Bar ---
+    if (radialBarChart) {
+        radialBarChart.updateOptions({ labels: scenarioLabels, colors: colors });
+        radialBarChart.updateSeries(means);
+    }
+
+    // --- Bar Chart ---
+    if (barChart) {
+        barChart.updateOptions({
+            chart: {
+                type: "bar",
+                animations: { enabled: true, easing: "easeinout", speed: 700 },
+                toolbar: { show: false }
+            },
+            xaxis: { categories: scenarioLabels, labels: { show: false } },
+            legend: { show: true, position: "bottom", horizontalAlign: "center" },
+            colors: colors,
+            plotOptions: { bar: { borderRadius: 6, columnWidth: "50%", distributed: true } },
+            dataLabels: {
+                enabled: true,
+                style: { fontSize: "12px", fontWeight: "bold", colors: ["#000"] }, // Yazılar siyah
+                formatter: val => (val != null ? `${val.toFixed(2)}` : "-"),
+                offsetY: -10
+            },
+            tooltip: {
+                theme: "dark", // tooltip’in arka planını da isteğe göre ayarlayabilirsin
+                style: { fontSize: "12px", color: "#000" }, // yazıyı siyah yapıyoruz
+                y: { formatter: val => `${val?.toFixed(2)} kWh/m²` }
+            },
+            grid: { borderColor: "#ddd", strokeDashArray: 4 },
+        });
+        barChart.updateSeries([{ name: "Mean", data: means }]);
+    }
+
+
+    // --- Radar Chart ---
+    if (radarChart) {
+        radarChart.updateOptions({
+            labels: scenarioLabels,
+            colors: colors,
+            tooltip: {
+                theme: "dark",
+                style: { fontSize: "12px", color: "#000" },
+                y: { formatter: val => val?.toFixed(2) }
+            }
+        });
+        radarChart.updateSeries([{ name: "Mean", data: means }]);
+    }
+
+    // --- BoxPlot Chart ---
+    if (boxPlotChart) {
+        const boxData = boxStats.map((arr, i) => ({ x: scenarioLabels[i], y: arr }));
+        boxPlotChart.updateOptions({
+            colors: colors,
+            tooltip: {
+                theme: "dark",
+                style: { fontSize: "12px", color: "#000" },
+                y: { formatter: val => Array.isArray(val) ? val.map(v => v?.toFixed(2)).join(", ") : val?.toFixed(2) }
+            }
+        });
+        boxPlotChart.updateSeries([{ name: "Scenario Stats", data: boxData }]);
+    }
+
+
+}
+
+const createScenarioBtn = document.getElementById('btnCreateScenarios');
+
+createScenarioBtn.addEventListener('click', () => {
+    updateScenarioCharts();
+});
