@@ -364,13 +364,13 @@
                                     <h5 class="card-title">Scenario 1: 2025_Base_Qheating</h5>
 
                                     <!-- Year Dropdown -->
-                                    <p>
+@*                                     <p>
                                         Year:
                                         <select id="yearSelect1" class="form-select form-select-sm" style="width: auto; display: inline-block;">
                                             <option value="2025" selected>2025</option>
                                             <option value="2050">2050</option>
                                         </select>
-                                    </p>
+                                    </p> *@
 
                                     <!-- Base / Enve with HP/PV -->
                                     <div class="mt-2">
@@ -405,15 +405,6 @@
                                 <div class="card-body">
                                     <h5 class="card-title">Scenario 2: Scenario2FieldName</h5>
 
-                                    <!-- Year Dropdown -->
-                                    <p>
-                                        Year:
-                                        <select id="yearSelect2" class="form-select form-select-sm" style="width: auto; display: inline-block;">
-                                            <option value="2025" selected>2025</option>
-                                            <option value="2050">2050</option>
-                                        </select>
-                                    </p>
-
                                     <!-- Base / Enve with HP/PV -->
                                     <div class="mt-2">
                                         <div class="d-flex align-items-center">
@@ -445,16 +436,6 @@
                             <div class="card text-white bg-success">
                                 <div class="card-body">
                                     <h5 class="card-title">Scenario 3: Scenario3FieldName</h5>
-
-                                    <!-- Year Dropdown -->
-                                    <p>
-                                        Year:
-                                        <select id="yearSelect3" class="form-select form-select-sm" style="width: auto; display: inline-block;">
-                                            <option value="2025" selected>2025</option>
-                                            <option value="2050">2050</option>
-                                        </select>
-                                    </p>
-
                                     <!-- Base / Enve with HP/PV -->
                                     <div class="mt-2">
                                         <div class="d-flex align-items-center">
@@ -486,16 +467,6 @@
                             <div class="card text-dark bg-warning">
                                 <div class="card-body">
                                     <h5 class="card-title">Scenario 4: Scenario4FieldName</h5>
-
-                                    <!-- Year Dropdown -->
-                                    <p>
-                                        Year:
-                                        <select id="yearSelect4" class="form-select form-select-sm" style="width: auto; display: inline-block;">
-                                            <option value="2025" selected>2025</option>
-                                            <option value="2050">2050</option>
-                                        </select>
-                                    </p>
-
                                     <!-- Base / Enve with HP/PV -->
                                     <div class="mt-2">
                                         <div class="d-flex align-items-center">
@@ -530,30 +501,36 @@
 
                 <div class="container py-4">
                     <div class="row">
+                        <!-- Capex Opex -->
+                        <div class="col-md-12 mb-4">
+                            <div class="border rounded p-2">
+                                <div id="capexopexChart"></div>
+                            </div>
+                        </div>
 
                         <!-- Radial Bar Chart -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="radialBarChart"></div>
                             </div>
                         </div>
 
                         <!-- Bar Chart -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="barChart"></div>
                             </div>
                         </div>
 
                         <!-- Radar Chart -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="radarChart"></div>
                             </div>
                         </div>
 
                         <!-- Boxplot Chart -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="boxPlotChart"></div>
                             </div>

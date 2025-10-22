@@ -97,7 +97,12 @@ window.view = view;
 const layerList = new LayerList({
     view: view,
 });
-view.ui.add(layerList, { position: "top-left" });
+const expnad = new Expand({
+    view: view,
+    content: layerList,
+    expanded: false
+});
+view.ui.add(expnad, "top-left");
 
 view.when(() => {
     $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
