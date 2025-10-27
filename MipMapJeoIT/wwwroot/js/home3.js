@@ -682,24 +682,11 @@ async function drawScenarioCharts() {
             const stats = result.features?.[0]?.attributes;
             if (!stats) return console.warn("İstatistik sonucu boş.");
 
-            //// Max değerleri al ve 2 basamaklı yap
-            //const series = fields.map(f => {
-            //    const val = stats[`${f.name}_max`];
-            //    return typeof val === "number" ? parseFloat(val.toFixed(2)) : 0;
-            //});
-
-            //const labels = fields.map(f =>
-            //    (f.alias || f.name)
-            //        .replace(/^Payback /, "")
-            //        .replace(/_/g, " ")
-            //        .trim()
-            //);
-
             const filteredData = fields
                 .map(f => {
                     const val = stats[`${f.name}_max`];
                     return {
-                        label: (f.alias || f.name).replace(/^Payback_/, "").replace(/_/g, " ").trim(),
+                        label: (f.alias || f.name).replace(/^Payback /, "").replace(/_/g, " ").trim(),
                         value: typeof val === "number" ? parseFloat(val.toFixed(2)) : 0
                     };
                 })
