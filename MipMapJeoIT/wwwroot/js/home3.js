@@ -80,7 +80,7 @@ let featureTable;
 let activeLayerView;
 let activeLayer;
 let highlight;
-
+let currentLayer;
 
 let ODTUScene = new WebScene({
     portalItem: { id: "3adfc71e9e2a41cba7607b88046d6ecc" }
@@ -113,6 +113,7 @@ view.when(() => {
     if (groupLayer) {
         // GroupLayer içindeki Uwall katmanını bul
         const uwallLayer = groupLayer.layers.find(l => l.title === "Uwall");
+        currentLayer = groupLayer.layers.find(l => l.visible);
 
         // Tüm alt katmanları kontrol et
         groupLayer.layers.forEach(l => {
@@ -133,6 +134,7 @@ view.when(() => {
     });
 
     initSliders(groupLayer);
+    drawScenarioCharts()
 });
 
 async function filterScene() {
@@ -554,7 +556,7 @@ function setActiveWidget(type) {
                 returnGeometryEnabled: true,
                 view: view,
                 layer: activeLayer,
-                hiddenFields: ["Shape__Length", "Shape__Area","OBJECTID"],
+                hiddenFields: ["Shape__Length", "Shape__Area", "OBJECTID"],
                 container: div,
                 actionColumnConfig: {
                     label: "Zoom to feature",
@@ -632,9 +634,9 @@ const btnScenario = document.getElementById("btnScenario");
 const scenarioContainer = document.getElementById("scenarioContainer");
 
 function forceViewResize() {
- 
+
     const v = window.view || window.sceneView || window.mapView;
-    
+
     try { v && typeof v.resize === "function" && v.resize(); } catch { }
     window.dispatchEvent(new Event("resize"));
 }
@@ -647,7 +649,7 @@ btnScenario.addEventListener("click", () => {
         requestAnimationFrame(forceViewResize);
     } else {
         scenarioContainer.classList.add("open");
-        if (typeof drawScenarioCharts === "function") drawScenarioCharts();
+        //if (typeof drawScenarioCharts === "function") drawScenarioCharts();
         requestAnimationFrame(forceViewResize);
     }
 });
@@ -659,36 +661,88 @@ let barChart;
 let radarChart;
 let boxPlotChart;
 
-function drawScenarioCharts() {
+async function drawScenarioCharts() {
     // === RADIAL BAR CHART ===
     const radialBarCanvas = document.querySelector("#radialBarChart");
-    if (radialBarCanvas) {
-        radialBarChart = new ApexCharts(radialBarCanvas, {
-            chart: {
-                type: 'radialBar',
-                height: 250,
-                background: '#fff'
-            },
-            series: [70], // ilk değer
-            labels: ["Mean"],
-            colors: ["#36a2eb"],
-            plotOptions: {
-                radialBar: {
-                    hollow: { size: '50%' },
-                    dataLabels: {
-                        name: { fontSize: '14px' },
-                        value: { fontSize: '20px', formatter: val => val + "%" }
+
+    if (radialBarCanvas && currentLayer) {
+        // Payback ile başlayan tüm alanlar
+        const fields = currentLayer.fields.filter(f => f.name.startsWith("Payback_"));
+        if (!fields.length) return console.warn("Payback alanı bulunamadı.");
+
+        // OutStatistics ile max değerleri al
+        const statQuery = currentLayer.createQuery();
+        statQuery.outStatistics = fields.map(f => ({
+            onStatisticField: f.name,
+            outStatisticFieldName: `${f.name}_max`,
+            statisticType: "max"
+        }));
+
+        currentLayer.queryFeatures(statQuery).then(result => {
+            const stats = result.features?.[0]?.attributes;
+            if (!stats) return console.warn("İstatistik sonucu boş.");
+
+            //// Max değerleri al ve 2 basamaklı yap
+            //const series = fields.map(f => {
+            //    const val = stats[`${f.name}_max`];
+            //    return typeof val === "number" ? parseFloat(val.toFixed(2)) : 0;
+            //});
+
+            //const labels = fields.map(f =>
+            //    (f.alias || f.name)
+            //        .replace(/^Payback /, "")
+            //        .replace(/_/g, " ")
+            //        .trim()
+            //);
+
+            const filteredData = fields
+                .map(f => {
+                    const val = stats[`${f.name}_max`];
+                    return {
+                        label: (f.alias || f.name).replace(/^Payback_/, "").replace(/_/g, " ").trim(),
+                        value: typeof val === "number" ? parseFloat(val.toFixed(2)) : 0
+                    };
+                })
+                .filter(item => item.value > 0); // 0 olanları at
+
+            // Series ve labels dizilerini oluştur
+            const series = filteredData.map(item => item.value);
+            const labels = filteredData.map(item => item.label);
+
+            // Ortadaki sabit max değeri al (0 olanlar dahil değil)
+            const maxValue = Math.max(...series).toFixed(2);
+
+
+            const radialBarChart = new ApexCharts(radialBarCanvas, {
+                chart: { type: 'radialBar', height: 350 },
+                series: series,
+                labels: labels,
+                colors: ["#36a2eb", "#ff6384", "#ffcd56", "#4bc0c0", "#9966ff", "#ff9f40", "#8a89a6"],
+                plotOptions: {
+                    radialBar: {
+                        hollow: { size: '35%' },
+                        track: { strokeWidth: '100%' },
+                        dataLabels: {
+                            name: { show: true, fontSize: '16px' },
+                            value: { show: true }, // dilim değerini gizle
+                            total: {
+                                show: true,
+                                label: 'Maks.',
+                                formatter: () => `${maxValue} yıl` // ortadaki sabit max değer
+                            }
+                        }
                     }
-                }
-            },
-            total: {
-                show: true,
-                label: 'Mean',
-            },
-            title: { text: 'Radial Bar Chart' }
-        });
-        radialBarChart.render();
+                },
+                legend: { show: true, position: 'bottom' },
+                title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' },
+            });
+
+            radialBarChart.render();
+        }).catch(err => console.error(err));
     }
+
+
+
 
     // === BAR CHART ===
     const barCanvas = document.querySelector("#barChart");
@@ -732,36 +786,433 @@ function drawScenarioCharts() {
         radarChart.render();
     }
 
-    // === BOX PLOT ===
-    const boxPlotCanvas = document.querySelector("#boxPlotChart");
-    if (boxPlotCanvas) {
-        boxPlotChart = new ApexCharts(boxPlotCanvas, {
-            chart: {
-                type: 'boxPlot',
-                height: 250,
-                background: '#fff'
-            },
-            series: [{
-                name: 'Box',
+    // === CAPEX → EMISSION → EMISSION REDUCTION (SLOPE CHART) ===
+    const slopeCanvas = document.querySelector("#slopeChart");
+    if (slopeCanvas && currentLayer) {
+
+        // === 1️⃣ İlgili alanları filtrele ===
+        const capexFields = currentLayer.fields.filter(f => f.name.startsWith("CAPEX_"));
+        const emissionFields = currentLayer.fields.filter(f =>
+            f.name.startsWith("Emission_") && !f.name.includes("_Reduction")
+        );
+        const reductionFields = currentLayer.fields.filter(f =>
+            f.name.startsWith("Emission_Reduction_")
+        );
+
+        const allFields = [...capexFields, ...emissionFields, ...reductionFields];
+
+        if (!allFields.length) {
+            console.warn("Slope chart için field bulunamadı.");
+            return;
+        }
+
+        // === 2️⃣ outStatistics ile mean değerlerini al ===
+        const statQuery = currentLayer.createQuery();
+        statQuery.outStatistics = allFields.map(f => ({
+            onStatisticField: f.name,
+            outStatisticFieldName: `${f.name}_mean`,
+            statisticType: "avg"
+        }));
+        statQuery.returnGeometry = false;
+
+        currentLayer.queryFeatures(statQuery).then(statResult => {
+            const attrs = statResult.features[0]?.attributes ?? {};
+
+            // === 3️⃣ Mean değerlerini senaryolara göre ayıkla ===
+            const scenarioNames = [
+                "BASE_PV","BASE_HP","BASE_HP_PV","Enve","Enve_PV","Enve_HP","Enve_HP_PV"
+            ];
+
+            const getMeanValue = (prefix, scenario) => {
+                const key = Object.keys(attrs).find(k => k.startsWith(prefix) && k.includes(scenario) && k.endsWith("_mean"));
+                return key ? parseFloat(attrs[key]) || 0 : 0;
+            };
+
+            const seriesData = scenarioNames.map(name => ({
+                name: name,
                 data: [
-                    { x: 'Set 1', y: [10, 15, 25, 35, 40] },
-                    { x: 'Set 2', y: [5, 7, 10, 12, 15] },
-                    { x: 'Set 3', y: [15, 20, 30, 40, 50] }
+                    { x: "Capex", y: getMeanValue("CAPEX_", name) },
+                    { x: "Total Emission", y: getMeanValue("Emission_", name) },
+                    { x: "Emission Reduction", y: getMeanValue("Emission_Reduction_", name) }
                 ]
-            }],
-            colors: ["#4bc0c0"],
-            title: { text: 'Boxplot Chart' }
+            })).filter(s => s.data.some(p => p.y !== 0));
+
+            // === 4️⃣ Renk paleti ===
+            const colors = [
+                "#007bff", "#28a745", "#ffc107", "#dc3545",
+                "#6f42c1", "#20c997", "#6610f2", "#8bc34a"
+            ];
+
+            // === 5️⃣ Grafiği oluştur ===
+            const slopeChart = new ApexCharts(slopeCanvas, {
+                chart: {
+                    type: 'line',
+                    height: 700,
+                    background: '#fff',
+                    toolbar: { show: false },
+                    zoom: { enabled: false }
+                },
+                series: seriesData,
+                colors: colors,
+                stroke: {
+                    width: 3,
+                    curve: 'straight'
+                },
+                xaxis: {
+                    categories: ["Capex", "Total Emission", "Emission Reduction"],
+                    title: { text: "Parametreler" }
+                },
+                yaxis: [
+                    {
+                        title: { text: "Capex (€)" },
+                        labels: { formatter: val => val.toLocaleString() + " €" }
+                    },
+                    {
+                        opposite: true,
+                        title: { text: "Emisyon (kg CO₂)" },
+                        labels: { formatter: val => val.toLocaleString() + " kg CO₂" }
+                    }
+                ],
+                tooltip: {
+                    theme: "dark",
+                    shared: true,
+                    intersect: false,
+                    y: { formatter: val => val.toLocaleString() }
+                },
+                dataLabels: {
+                    enabled: false,
+                    formatter: (val, opts) => {
+                        const xLabel = opts.w.globals.labels[opts.dataPointIndex];
+                        if (xLabel === "Capex") return `${val.toLocaleString()} €`;
+                        if (xLabel === "Total Emission") return `${val.toLocaleString()} kg CO₂`;
+                        if (xLabel === "Emission Reduction") return `${val.toLocaleString()} kg CO₂`;
+                        return val.toLocaleString();
+                    }
+                },
+                title: {
+                    text: "Capex → Total Emission → Emission Reduction (Slope Chart - Mean)",
+                    align: "center",
+                    style: { fontSize: "16px", fontWeight: "bold" }
+                },
+                legend: {
+                    show: true,
+                    position: "top",
+                    horizontalAlign: "center",
+                }
+            });
+
+            slopeChart.render();
         });
-        boxPlotChart.render();
     }
+    // === NPV BOX PLOT ===
+    const npvboxPlotCanvas = document.querySelector("#npvboxPlotChart");
+    if (npvboxPlotCanvas && currentLayer) {
+
+        // NPV_ ile başlayan alanları al
+        const fields = currentLayer.fields.filter(f =>
+            f.name.startsWith("NPV_")
+        );
+
+        // Veri sorgulaması
+        const query = currentLayer.createQuery();
+        query.outFields = fields.map(f => f.name);
+        query.returnGeometry = false;
+
+        currentLayer.queryFeatures(query).then(result => {
+            if (!result.features.length) {
+                console.warn("NPV verisi bulunamadı.");
+                return;
+            }
+
+            // Her NPV alanı için değerleri çıkar
+            const seriesData = fields.map(f => {
+                const values = result.features
+                    .map(feat => parseFloat(feat.attributes[f.name]))
+                    .filter(v => !isNaN(v));
+
+                if (!values.length) return null;
+
+                // Boxplot istatistikleri: min, Q1, median, Q3, max
+                values.sort((a, b) => a - b);
+                const min = values[0];
+                const q1 = values[Math.floor(values.length * 0.25)];
+                const median = values[Math.floor(values.length * 0.5)];
+                const q3 = values[Math.floor(values.length * 0.75)];
+                const max = values[values.length - 1];
+
+                return {
+                    x: (f.alias || f.name).replace(/^NPV_/, ""),
+                    y: [min, q1, median, q3, max]
+                };
+            }).filter(Boolean);
+
+            if (!seriesData.length) {
+                console.warn("Boxplot için geçerli NPV verisi bulunamadı.");
+                return;
+            }
+
+            // Grafiği oluştur
+            const npvboxplot = new ApexCharts(npvboxPlotCanvas, {
+                chart: {
+                    type: 'boxPlot',
+                    height: 450,
+                    background: '#fff',
+                    toolbar: { show: true }
+                },
+                series: [{
+                    name: 'NPV',
+                    data: seriesData
+                }],
+                colors: ["#4bc0c0"],
+                title: {
+                    text: 'Senaryo Bazlı NPV Boxplot',
+                    align: 'center',
+                    style: { fontSize: '16px', fontWeight: 'bold' }
+                },
+                tooltip: {
+                    theme: 'dark',
+                    shared: true,
+                    custom: function ({ seriesIndex, dataPointIndex, w }) {
+                        const y = w.config.series[seriesIndex].data[dataPointIndex].y;
+                        const name = w.config.series[seriesIndex].data[dataPointIndex].x;
+                        return `<div style="padding:5px">
+                        <strong>${name}</strong><br/>
+                        Min: €${y[0].toFixed(2)}<br/>
+                        Q1: €${y[1].toFixed(2)}<br/>
+                        Medyan: €${y[2].toFixed(2)}<br/>
+                        Q3: €${y[3].toFixed(2)}<br/>
+                        Max: €${y[4].toFixed(2)}
+                    </div>`;
+                    }
+                },
+                yaxis: {
+                    title: { text: 'NPV (€)' },
+                    labels: {
+                        formatter: val => "€" + val.toFixed(2)
+                    }
+                },
+                xaxis: { title: { text: 'Senaryolar' } }
+            });
+
+            npvboxplot.render();
+        });
+    }
+
+
+    // === ROI BOX PLOT ===
+    const boxPlotCanvas = document.querySelector("#roiboxPlotChart");
+    if (boxPlotCanvas && currentLayer) {
+
+        // ROI_ ile başlayan alanları al
+        const fields = currentLayer.fields.filter(f =>
+            f.name.startsWith("ROI_")
+        );
+
+        // Veri sorgulaması
+        const query = currentLayer.createQuery();
+        query.outFields = fields.map(f => f.name);
+        query.returnGeometry = false;
+
+        currentLayer.queryFeatures(query).then(result => {
+            if (!result.features.length) {
+                console.warn("ROI verisi bulunamadı.");
+                return;
+            }
+
+            // Her ROI alanı için ROI değerlerini çıkar
+            const seriesData = fields.map(f => {
+                const values = result.features
+                    .map(feat => parseFloat(feat.attributes[f.name]))
+                    .filter(v => !isNaN(v));
+
+                if (!values.length) return null;
+
+                // Boxplot istatistikleri: min, Q1, median, Q3, max
+                values.sort((a, b) => a - b);
+                const min = values[0];
+                const q1 = values[Math.floor(values.length * 0.25)];
+                const median = values[Math.floor(values.length * 0.5)];
+                const q3 = values[Math.floor(values.length * 0.75)];
+                const max = values[values.length - 1];
+
+                return {
+                    x: (f.alias || f.name).replace(/^ROI /, ""),
+                    y: [min, q1, median, q3, max]
+                };
+            }).filter(Boolean);
+
+            if (!seriesData.length) {
+                console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
+                return;
+            }
+
+            // Grafiği oluştur
+            const roiboxplot = new ApexCharts(boxPlotCanvas, {
+                chart: {
+                    type: 'boxPlot',
+                    height: 450,
+                    background: '#fff',
+                    toolbar: { show: true }
+                },
+                series: [{
+                    name: 'ROI',
+                    data: seriesData
+                }],
+                colors: ["#4bc0c0"],
+                title: {
+                    text: 'Senaryo Bazlı ROI Boxplot',
+                    align: 'center',
+                    style: { fontSize: '16px', fontWeight: 'bold' }
+                },
+                tooltip: {
+                    theme: 'dark',
+                    shared: true,
+                    custom: function ({ seriesIndex, dataPointIndex, w }) {
+                        const y = w.config.series[seriesIndex].data[dataPointIndex].y;
+                        const name = w.config.series[seriesIndex].data[dataPointIndex].x;
+                        return `<div style="padding:5px">
+                <strong>${name}</strong><br/>
+                Min: ${y[0].toFixed(2)}%<br/>
+                Q1: ${y[1].toFixed(2)}%<br/>
+                Medyan: ${y[2].toFixed(2)}%<br/>
+                Q3: ${y[3].toFixed(2)}%<br/>
+                Max: ${y[4].toFixed(2)}%
+                </div>`;
+                    }
+                },
+                yaxis: {
+                    title: { text: 'ROI (%)' },
+                    labels: {
+                        formatter: val => val.toFixed(2) + "%"
+                    }
+                },
+                xaxis: { title: { text: 'Senaryolar' } }
+            });
+
+            roiboxplot.render();
+        });
+    }
+
+    // === 1. CAPEX ve OPEX alanlarını bul ===
+    const capexOpexDiv = document.querySelector("#capexopexChart");
+    if (!capexOpexDiv) return;
+
+
+    if (!currentLayer) {
+        console.warn("Görünür layer bulunamadı.");
+        return;
+    }
+
+    try {
+        // === 1. CAPEX ve OPEX alanlarını bul ===
+        const fields = currentLayer.fields.filter(f =>
+            f.name.startsWith("CAPEX_") || f.name.startsWith("OPEX_")
+        );
+
+        if (!fields.length) {
+            console.warn("CAPEX/OPEX field bulunamadı.");
+            return;
+        }
+
+        const capexFields = fields.filter(f => f.name.startsWith("CAPEX_"));
+        const opexFields = fields.filter(f => f.name.startsWith("OPEX_"));
+
+        // === 2. Tek bir outStatistics sorgusu ile tüm mean değerlerini al ===
+        const statQuery = currentLayer.createQuery();
+        statQuery.outStatistics = fields.map(f => ({
+            onStatisticField: f.name,
+            outStatisticFieldName: `${f.name}_mean`,
+            statisticType: "avg"
+        }));
+
+        const statResult = await currentLayer.queryFeatures(statQuery);
+        const attrs = statResult.features[0]?.attributes ?? {};
+
+        // === 3. Mean değerlerini senaryolara göre ayıkla ===
+        const getFieldMeans = (fieldList, prefix) => {
+            const data = {};
+            fieldList.forEach(f => {
+                const scenario = f.name.replace(prefix, "").replace(/_+$/, "");
+                const meanVal = attrs[`${f.name}_mean`];
+                data[scenario] = meanVal != null ? parseFloat(meanVal.toFixed(2)) : 0;
+            });
+            return data;
+        };
+
+        const capexData = getFieldMeans(capexFields, "CAPEX_");
+        const opexData = getFieldMeans(opexFields, "OPEX_");
+
+        // === 4. Ortak senaryo adlarını oluştur ===
+        const scenarioNames = Array.from(
+            new Set([...Object.keys(capexData), ...Object.keys(opexData)])
+        );
+
+        const capexSeries = scenarioNames.map(s => capexData[s] || 0);
+        const opexSeries = scenarioNames.map(s => opexData[s] || 0);
+
+        // === 5. K/M/B formatlama fonksiyonu ===
+        const formatValue = val => {
+            if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + "B";
+            if (val >= 1_000_000) return (val / 1_000_000).toFixed(2) + "M";
+            if (val >= 1_000) return (val / 1_000).toFixed(2) + "K";
+            return val.toLocaleString();
+        };
+
+        // === 6. Grafik oluştur ===
+        const capexOpexChart = new ApexCharts(capexOpexDiv, {
+            chart: {
+                type: 'bar',
+                stacked: true,
+                height: 400,
+                background: '#fff',
+                toolbar: { show: true }
+            },
+            series: [
+                { name: "CAPEX (x̄)", data: capexSeries },
+                { name: "OPEX (x̄)", data: opexSeries }
+            ],
+            xaxis: { categories: scenarioNames, title: { text: "Senaryo" } },
+            yaxis: {
+                title: { text: "Ortalama Maliyet" },
+                labels: { formatter: formatValue }
+            },
+            tooltip: {
+                shared: true,
+                intersect: false,
+                theme: 'dark',
+                y: { formatter: formatValue }
+            },
+            colors: ["#1976D2", "#FFB300"],
+            legend: { position: "top", horizontalAlign: "left" },
+            plotOptions: {
+                bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 }
+            },
+            dataLabels: {
+                enabled: true,
+                formatter: formatValue,
+                style: { fontSize: '11px', colors: ['#000'] }
+            },
+            title: {
+                text: "Senaryolara Göre Ortalama CAPEX - OPEX Maliyetleri (x̄)",
+                align: 'center'
+            }
+        });
+
+        capexOpexChart.render();
+
+    } catch (err) {
+        console.error("CAPEX/OPEX grafiği oluşturulamadı:", err);
+    }
+
 }
 
 function getAllScenarioValues() {
     const scenarios = [];
 
     for (let i = 1; i <= 4; i++) {
-        const yearSelect = document.querySelector(`#yearSelect${i}`);
-        const selectedYear = yearSelect ? yearSelect.value : null;
+        //const yearSelect = document.querySelector(`#yearSelect${i}`);
+        //const selectedYear = yearSelect ? yearSelect.value : null;
+        const selectedYear = 2025
 
         const baseRadio = document.querySelector(`#baseOption${i}`);
         const enveRadio = document.querySelector(`#enveOption${i}`);
@@ -787,11 +1238,7 @@ function getAllScenarioValues() {
 }
 
 async function updateScenarioCharts() {
-    const scenarios = getAllScenarioValues(); // 4 senaryoyu al
-    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
-    if (!groupLayer) return console.warn("Group layer bulunamadı.");
-
-    const currentLayer = groupLayer.layers.find(l => l.visible);
+    const scenarios = getAllScenarioValues();
     if (!currentLayer) return console.warn("Görünür layer bulunamadı.");
 
     const means = [];
