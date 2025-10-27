@@ -847,10 +847,15 @@ async function drawScenarioCharts() {
             const slopeChart = new ApexCharts(slopeCanvas, {
                 chart: {
                     type: 'line',
-                    height: 700,
+                    height: 500,
                     background: '#fff',
                     toolbar: { show: false },
                     zoom: { enabled: false }
+                },
+                plotOptions: {
+                    line: {
+                        horizontal: false // yatay çizilmesini engelle (varsayılan dikey)
+                    }
                 },
                 series: seriesData,
                 colors: colors,
@@ -860,34 +865,22 @@ async function drawScenarioCharts() {
                 },
                 xaxis: {
                     categories: ["Capex", "Total Emission", "Emission Reduction"],
-                    title: { text: "Parametreler" }
-                },
-                yaxis: [
-                    {
-                        title: { text: "Capex (€)" },
-                        labels: { formatter: val => val.toLocaleString() + " €" }
-                    },
-                    {
-                        opposite: true,
-                        title: { text: "Emisyon (kg CO₂)" },
-                        labels: { formatter: val => val.toLocaleString() + " kg CO₂" }
+                    title: { text: "Parametreler" },
+                    labels: {
+                        rotate: 0,         // yazılar dik olmasın
+                        style: {
+                            fontSize: '13px'
+                        }
                     }
-                ],
+                },
+                yaxis: {
+                    title: { text: "Değerler" },
+                    labels: { formatter: val => val.toLocaleString() }
+                },
                 tooltip: {
                     theme: "dark",
                     shared: true,
-                    intersect: false,
-                    y: { formatter: val => val.toLocaleString() }
-                },
-                dataLabels: {
-                    enabled: false,
-                    formatter: (val, opts) => {
-                        const xLabel = opts.w.globals.labels[opts.dataPointIndex];
-                        if (xLabel === "Capex") return `${val.toLocaleString()} €`;
-                        if (xLabel === "Total Emission") return `${val.toLocaleString()} kg CO₂`;
-                        if (xLabel === "Emission Reduction") return `${val.toLocaleString()} kg CO₂`;
-                        return val.toLocaleString();
-                    }
+                    intersect: false
                 },
                 title: {
                     text: "Capex → Total Emission → Emission Reduction (Slope Chart - Mean)",
@@ -897,9 +890,10 @@ async function drawScenarioCharts() {
                 legend: {
                     show: true,
                     position: "top",
-                    horizontalAlign: "center",
+                    horizontalAlign: "center"
                 }
             });
+
 
             slopeChart.render();
         });
