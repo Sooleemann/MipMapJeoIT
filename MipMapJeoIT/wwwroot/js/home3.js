@@ -728,49 +728,74 @@ async function drawScenarioCharts() {
         }).catch(err => console.error(err));
     }
 
-
-
-
-    // === BAR CHART ===
-    const barCanvas = document.querySelector("#barChart");
-    if (barCanvas) {
-        barChart = new ApexCharts(barCanvas, {
-            chart: {
-                type: 'bar',
-                height: 250,
-                background: '#fff'
-            },
-            series: [{
-                name: 'Votes',
-                data: [12, 19, 3, 5, 2]
-            }],
-            xaxis: {
-                categories: ["Red", "Blue", "Yellow", "Green", "Purple"]
-            },
-            colors: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"],
-            title: { text: 'Bar Chart' }
-        });
-        barChart.render();
-    }
-
     // === RADAR CHART ===
     const radarCanvas = document.querySelector("#radarChart");
-    if (radarCanvas) {
-        radarChart = new ApexCharts(radarCanvas, {
-            chart: {
-                type: 'radar',
-                height: 250,
-                background: '#fff'
-            },
-            series: [{
-                name: 'Series 1',
-                data: [80, 50, 30, 40, 100, 20]
-            }],
-            labels: ["January", "February", "March", "April", "May", "June"],
-            colors: ["#ff6384"],
-            title: { text: 'Radar Chart' }
-        });
-        radarChart.render();
+    if (radarCanvas && currentLayer) {
+        // PV’siz IOD alanları
+        const iodFields = currentLayer.fields.filter(f =>
+            f.name.toUpperCase().includes("IOD") && !f.name.toUpperCase().includes("PV")
+        );
+        if (!iodFields.length) return console.warn("PV'siz IOD alanı bulunamadı.");
+
+        // Labels (senaryolar)
+        const labelsSet = new Set();
+        iodFields.forEach(f => labelsSet.add(f.name.replace(/^F(2025|2050)_/i, "")));
+        const labels = Array.from(labelsSet);
+
+        // queryFeatures ile tüm değerleri çek
+        const query = currentLayer.createQuery();
+        query.where = "1=1";
+        query.outFields = iodFields.map(f => f.name);
+        query.returnGeometry = false;
+
+        currentLayer.queryFeatures(query).then(result => {
+            if (!result.features.length) return console.warn("Veri yok.");
+
+            const seriesMap = { "2025": [], "2050": [] };
+
+            ["2025", "2050"].forEach(year => {
+                const fieldsForYear = iodFields.filter(f => f.name.startsWith(`F${year}_`));
+
+                fieldsForYear.forEach(f => {
+                    let values = result.features.map(feat => {
+                        let val = feat.attributes[f.name];
+                        if (val == null) return NaN;
+                        val = val.toString().replace(",", ".");
+                        return parseFloat(val);
+                    }).filter(v => !isNaN(v));
+
+                    const maxVal = values.length ? Math.max(...values) : 0;
+                    seriesMap[year].push(parseFloat(maxVal.toFixed(2)));
+                });
+            });
+
+            console.log("IOD Fields:", iodFields.map(f => f.name));
+            console.log("SeriesMap:", seriesMap);
+
+            // ✅ Başlangıçta her iki seri de aktif, null dizisi yok
+            const series = [
+                { name: "2025", data: seriesMap["2025"] },
+                { name: "2050", data: seriesMap["2050"] }
+            ];
+
+            const radarChart = new ApexCharts(radarCanvas, {
+                chart: { type: 'radar', height: 450 },
+                dataLabels: {
+                    enabled: true   // veya false
+                },
+                series: series,
+                labels: labels,
+                plotOptions: { radar: { polygons: { strokeColors: '#e0e0e0' } } },
+                tooltip: { theme: "dark" },
+                legend: { position: 'top' },
+                title: { text: "PV'siz IOD Değerleri - Yıllara Göre" },
+                colors: ["#36a2eb", "#ff6384"]
+            });
+
+            // ✅ Legend event override kaldırıldı
+            radarChart.render();
+
+        }).catch(err => console.error(err));
     }
 
     // === CAPEX → EMISSION → EMISSION REDUCTION (SLOPE CHART) ===
