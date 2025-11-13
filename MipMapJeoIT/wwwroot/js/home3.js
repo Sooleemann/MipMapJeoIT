@@ -67,7 +67,6 @@
     "@arcgis/core/widgets/FeatureTable.js"
 ]);
 
-
 // Load webscene and display it in a SceneView
 let homeCamera;
 let activeWidget = null;
@@ -109,58 +108,68 @@ view.when(() => {
     homeCamera = view.camera.clone();
 
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    if (!groupLayer) return;
 
-    if (groupLayer) {
-        // GroupLayer içindeki Uwall katmanını bul
-        const uwallLayer = groupLayer.layers.find(l => l.title === "Uwall");
-        currentLayer = groupLayer.layers.find(l => l.visible);
+    // Başlangıçta görünen ilk layer'ı al
+    currentLayer = groupLayer.layers.find(l => l.visible) || groupLayer.layers[0];
 
-        // Tüm alt katmanları kontrol et
-        groupLayer.layers.forEach(l => {
-            // Sadece Uwall açık kalsın
-            l.visible = (l.title === "Uwall");
-        });
-    }
+    // (İsteğe göre) başlangıçta sadece Uwall açık bırakma kısmını kaldırabilir/koruyabilirsin
+    groupLayer.layers.forEach(l => { l.visible = (l.title === "Uwall"); });
 
+    // SceneLayerView'leri topla (orijinal kodunla aynı)
     const layerNames = ["Uwall", "Uwindow", "Uroof", "Uground", "SHGC", "Infiltration Rate"];
-
     layerNames.forEach(name => {
         const layer = groupLayer.layers.find(l => l.title === name);
-        if (layer) {
-            view.whenLayerView(layer).then(lv => {
-                sceneLayerViews[name] = lv;
-            });
-        }
+        if (layer) view.whenLayerView(layer).then(lv => { sceneLayerViews[name] = lv; });
     });
 
-    initSliders(groupLayer);
-    drawScenarioCharts()
+    // 1) slider'ları ilk aktif layer ile başlat
+    initSliders(groupLayer, currentLayer).then(() => {
+        drawScenarioCharts();
+    });
+
+    // 2) Her alt layer'ın visible değişimini izle; visible true olunca aktif layer yap ve slider'ları güncelle
+    groupLayer.layers.forEach(layer => {
+        // arcgis layer objesinin watch fonksiyonu varsa kullan (API v4.x)
+        if (typeof layer.watch === "function") {
+            layer.watch("visible", (newVal) => {
+                if (newVal) {
+                    currentLayer = layer;
+                    updateSlidersForLayer(groupLayer, currentLayer);
+                }
+            });
+        } else {
+            // fallback: eğer watch yoksa başka event ekle (ör. LayerList kullanıyorsan onun event'ine bağla)
+        }
+    });
 });
 
 async function filterScene() {
     clearHighlighting();
 
-    // --- Mevcut 6 slider ---
+    // --- Sliders ---
     const uwall = $("#uwallSlider").data("ionRangeSlider").result;
     const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
     const uroof = $("#uroofSlider").data("ionRangeSlider").result;
     const uground = $("#ugroundSlider").data("ionRangeSlider").result;
     const shgc = $("#shgcSlider").data("ionRangeSlider").result;
     const infiltration = $("#infiltrationSlider").data("ionRangeSlider").result;
+    const opexbase2025 = $("#slideropexbase2025").data("ionRangeSlider").result;
+    const opexbase2050 = $("#slideropexbase2050").data("ionRangeSlider").result;
 
-    // --- Diğer sliderlar ---
     const grossFloor = $("#grossFloorSlider").data("ionRangeSlider").result;
     const qHeating2025 = $("#sliderQHeating2025").data("ionRangeSlider").result;
     const equipment2025 = $("#sliderEquipment2025").data("ionRangeSlider").result;
     const lighting2025 = $("#sliderLighting2025").data("ionRangeSlider").result;
     const emission2025 = $("#sliderEmission2025").data("ionRangeSlider").result;
+    const basepv2025 = $("#sliderBasePV2025").data("ionRangeSlider").result;
 
     const qHeating2050 = $("#sliderQHeating2050").data("ionRangeSlider").result;
     const equipment2050 = $("#sliderEquipment2050").data("ionRangeSlider").result;
     const lighting2050 = $("#sliderLighting2050").data("ionRangeSlider").result;
     const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
+    const basepv2050 = $("#sliderBasePV2050").data("ionRangeSlider").result;
 
-    // --- IOD sliderları (string) ---
     const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
     const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
 
@@ -168,43 +177,58 @@ async function filterScene() {
     const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
     if (!activeLayer) return;
 
-    const lv = await view.whenLayerView(activeLayer);
     const query = activeLayer.createQuery();
-    query.returnGeometry = true;
+    query.returnGeometry = false; // grafik için geometry gerekmez
 
-    // --- where koşulu ---
     query.where = `
-        Uwall >= ${uwall.from} AND Uwall <= ${uwall.to} AND
-        Uwindow >= ${uwindow.from} AND Uwindow <= ${uwindow.to} AND
-        Uroof >= ${uroof.from} AND Uroof <= ${uroof.to} AND
-        Uground >= ${uground.from} AND Uground <= ${uground.to} AND
-        SHGC >= ${shgc.from} AND SHGC <= ${shgc.to} AND
-        Infiltration >= ${infiltration.from} AND Infiltration <= ${infiltration.to} AND
-        Gross_Floor_Area >= ${grossFloor.from} AND Gross_Floor_Area <= ${grossFloor.to} AND
-        F2025_BASE_Qheating >= ${qHeating2025.from} AND F2025_BASE_Qheating <= ${qHeating2025.to} AND
-        Equipment_Load_All_Scenarios >= ${equipment2025.from} AND Equipment_Load_All_Scenarios <= ${equipment2025.to} AND
-        Lighting_Load_All_Scenarios >= ${lighting2025.from} AND Lighting_Load_All_Scenarios <= ${lighting2025.to} AND
-        Emission_BASE__kg_CO2_ >= ${emission2025.from} AND Emission_BASE__kg_CO2_ <= ${emission2025.to} AND
-        F2050_BASE_Qheating >= ${qHeating2050.from} AND F2050_BASE_Qheating <= ${qHeating2050.to} AND
-        Equipment_Load_All_Scenarios >= ${equipment2050.from} AND Equipment_Load_All_Scenarios <= ${equipment2050.to} AND
-        Lighting_Load_All_Scenarios >= ${lighting2050.from} AND Lighting_Load_All_Scenarios <= ${lighting2050.to} AND
-        Emission_BASE__kg_CO2_ >= ${emission2050.from} AND Emission_BASE__kg_CO2_ <= ${emission2050.to} 
-    `;
+    Uwall BETWEEN ${uwall.from} AND ${uwall.to} AND
+    Uwindow BETWEEN ${uwindow.from} AND ${uwindow.to} AND
+    Uroof BETWEEN ${uroof.from} AND ${uroof.to} AND
+    Uground BETWEEN ${uground.from} AND ${uground.to} AND
+    SHGC BETWEEN ${shgc.from} AND ${shgc.to} AND
+    Infiltration BETWEEN ${infiltration.from} AND ${infiltration.to} AND
+    OPEX_BASE____ BETWEEN ${opexbase2025.from} AND ${opexbase2025.to} AND
+    Gross_Floor_Area BETWEEN ${grossFloor.from} AND ${grossFloor.to} AND
+    F2025_BASE_Qheating BETWEEN ${qHeating2025.from} AND ${qHeating2025.to} AND
+    Equipment_Load_All_Scenarios BETWEEN ${equipment2025.from} AND ${equipment2025.to} AND
+    Lighting_Load_All_Scenarios BETWEEN ${lighting2025.from} AND ${lighting2025.to} AND
+    Emission_BASE__kg_CO2_ BETWEEN ${emission2025.from} AND ${emission2025.to} AND
+    F2025_BASE_PV_Production_PV_ BETWEEN ${basepv2025.from} AND ${basepv2025.to} AND
+    OPEX_BASE____ BETWEEN ${opexbase2050.from} AND ${opexbase2050.to} AND
+    F2050_BASE_Qheating BETWEEN ${qHeating2050.from} AND ${qHeating2050.to} AND
+    Equipment_Load_All_Scenarios BETWEEN ${equipment2050.from} AND ${equipment2050.to} AND
+    Lighting_Load_All_Scenarios BETWEEN ${lighting2050.from} AND ${lighting2050.to} AND
+    Emission_BASE__kg_CO2_ BETWEEN ${emission2050.from} AND ${emission2050.to} AND
+    F2050_BASE_PV_Production_PV_ BETWEEN ${basepv2050.from} AND ${basepv2050.to}
+`;
+
+    // --- IOD filtreleri yalnızca değer varsa ekle ---
+    if (iod2025 && iod2025 !== "null") {
+        query.where += ` AND F2025_BASE_IOD = '${iod2025}'`;
+    }
+
+    if (iod2050 && iod2050 !== "null") {
+        query.where += ` AND F2050_BASE_IOD = '${iod2050}'`;
+    }
 
     const result = await activeLayer.queryFeatures(query);
 
-    if (!result.features || result.features.length === 0) {
+    if (!result.features?.length) {
         activeLayer.definitionExpression = "1=0";
         console.log("Sonuç bulunamadı, layer boş gösteriliyor.");
         return;
     }
 
-    const objectIds = result.features.map(f => f.attributes.OBJECTID);
-    activeLayer.definitionExpression = `OBJECTID IN (${objectIds.join(",")})`;
+    // activeLayer.definitionExpression = `OBJECTID IN (${result.features.map(f => f.attributes.OBJECTID).join(",")})`;
+    activeLayer.definitionExpression = query.where; // daha güvenli
 
-    console.log("Toplam highlight edilen OBJECTID sayısı:", objectIds.length);
-    //console.log("DefinitionExpression set edildi:", activeLayer.definitionExpression);
+    // grafikleri temizle ve yeniden çiz
+    document.querySelectorAll(".apexcharts-canvas").forEach(el => el.remove());
+
+    currentLayer = activeLayer;
+    drawScenarioCharts();
 }
+
 // --- Sliderların min/max değerlerini WebScene layer'larından al ---
 async function getFieldMinMax(layer, field) {
     const query = layer.createQuery();
@@ -223,78 +247,183 @@ async function getFieldMinMax(layer, field) {
     return { min: stats.minVal ?? 0, max: stats.maxVal ?? 2 };
 }
 // --- Sliderları başlat ---
-async function initSliders(groupLayer) {
+async function initSliders(groupLayer, activeLayer) {
+    // sadece alan isimleri tutuyoruz; layerName artık yok
     const sliders = [
-        { id: "#uwallSlider", field: "Uwall", layerName: "Uwall" },
-        { id: "#uwindowSlider", field: "Uwindow", layerName: "Uwindow" },
-        { id: "#uroofSlider", field: "Uroof", layerName: "Uroof" },
-        { id: "#ugroundSlider", field: "Uground", layerName: "Uground" },
-        { id: "#shgcSlider", field: "SHGC", layerName: "SHGC" },
-        { id: "#infiltrationSlider", field: "Infiltration", layerName: "Infiltration Rate" },
-
-        { id: "#grossFloorSlider", field: "Gross_Floor_Area", layerName: "Uwall" },
-        // ---- 2025 Sliders ----
-        { id: "#sliderQHeating2025", field: "F2025_BASE_Qheating", layerName: "Uwall" },
-        { id: "#sliderEquipment2025", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
-        { id: "#sliderLighting2025", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
-        { id: "#sliderEmission2025", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
-
-        // ---- 2050 Sliders ----
-        { id: "#sliderQHeating2050", field: "F2050_BASE_Qheating", layerName: "Uwall" },
-        { id: "#sliderEquipment2050", field: "Equipment_Load_All_Scenarios", layerName: "Uwall" },
-        { id: "#sliderLighting2050", field: "Lighting_Load_All_Scenarios", layerName: "Uwall" },
-        { id: "#sliderEmission2050", field: "Emission_BASE__kg_CO2_", layerName: "Uwall" },
-
+        { id: "#uwallSlider", field: "Uwall" },
+        { id: "#uwindowSlider", field: "Uwindow" },
+        { id: "#uroofSlider", field: "Uroof" },
+        { id: "#ugroundSlider", field: "Uground" },
+        { id: "#shgcSlider", field: "SHGC" },
+        { id: "#infiltrationSlider", field: "Infiltration" },
+        { id: "#slideropexbase2025", field: "OPEX_BASE____" },
+        { id: "#slideropexbase2050", field: "OPEX_BASE____" },
+        { id: "#grossFloorSlider", field: "Gross_Floor_Area" },
+        { id: "#sliderQHeating2025", field: "F2025_BASE_Qheating" },
+        { id: "#sliderEquipment2025", field: "Equipment_Load_All_Scenarios" },
+        { id: "#sliderLighting2025", field: "Lighting_Load_All_Scenarios" },
+        { id: "#sliderEmission2025", field: "Emission_BASE__kg_CO2_" },
+        { id: "#sliderBasePV2025", field: "F2025_BASE_PV_Production_PV_" },
+        { id: "#sliderQHeating2050", field: "F2050_BASE_Qheating" },
+        { id: "#sliderEquipment2050", field: "Equipment_Load_All_Scenarios" },
+        { id: "#sliderLighting2050", field: "Lighting_Load_All_Scenarios" },
+        { id: "#sliderEmission2050", field: "Emission_BASE__kg_CO2_" },
+        { id: "#sliderBasePV2050", field: "F2050_BASE_PV_Production_PV_" }
     ];
 
+    // Her slider'ı oluştur; aktif layer'dan min/max al (yoksa disable et)
     for (let s of sliders) {
-        const layer = groupLayer.layers.find(l => l.title === s.layerName);
-        if (!layer) continue;
+        const layer = activeLayer || groupLayer.layers[0];
+        let min = 0, max = 0, hasField = true;
+        try {
+            const mm = await getFieldMinMax(layer, s.field);
+            min = mm.min; max = mm.max;
+            // eğer min veya max NaN ise field yok varsay
+            if (isNaN(min) || isNaN(max)) hasField = false;
+        } catch (e) {
+            hasField = false;
+        }
 
-        const { min, max } = await getFieldMinMax(layer, s.field);
+        // Eğer ionRangeSlider zaten varsa önce destroy et (yeniden init için güvenli)
+        const $el = $(s.id);
+        const existing = $el.data("ionRangeSlider");
+        if (existing) existing.destroy();
 
-        $(s.id).ionRangeSlider({
+        // create
+        $el.ionRangeSlider({
             type: "double",
             grid: true,
-            min: min,
-            max: max,
-            from: min,
-            to: max,
+            min: hasField ? min : 0,
+            max: hasField ? max : 1,
+            from: hasField ? min : 0,
+            to: hasField ? max : 1,
             step: 0.001,
             skin: "flat",
-            prettify: function (num) {
-                return num.toFixed(3); // hep 3 basamak
+            prettify: num => num.toFixed(3),
+            onFinish: function () {
+                // filterScene çağrısını aktif layer ile yapıyoruz
+                filterScene({
+                    field: s.field,
+                    layerName: (activeLayer && activeLayer.title) || null
+                });
             },
-            onFinish: filterScene
+            // ionRangeSlider'ın 'disable' option'ı destekleniyorsa:
+            disable: !hasField
         });
     }
 
-    const iodValues = [
-        "office_no_iod",
-        "0.65",
-        "0.44",
-        "0.5",
-        "0.55",
-        "0.43",
-        "0.51",
-        "0.41",
-        "0.47",
-        "0.45"
+    // IOD değerleri
+    const iodValues2025 = ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"];
+    const iodValues2050 = ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"];
+
+    const iodSliders = [
+        { id: "#sliderIOD2025", values: iodValues2025, field: "F2025_BASE_IOD" },
+        { id: "#sliderIOD2050", values: iodValues2050, field: "F2050_BASE_IOD" }
     ];
 
-    $("#sliderIOD2025 , #sliderIOD2050").ionRangeSlider({
-        values: iodValues,
-        grid: true,
-        onFinish: function (data) {
-            const selected = data.from_value;
-            filterScene({
-                field: "F2025_BASE_IOD",
-                value: selected,
-                layerName: "Uwall"
-            });
-        }
+    iodSliders.forEach(s => {
+        const $el = $(s.id);
+        const inst = $el.data("ionRangeSlider");
+        if (inst) inst.destroy(); // daha sade
+
+        $el.ionRangeSlider({
+            values: s.values,
+            grid: true,
+            onFinish: function (data) {
+                const selected = data.from_value;
+                filterScene({
+                    field: s.field,
+                    value: selected, // direkt string gönder — parseFloat yok
+                    layerName: (activeLayer && activeLayer.title) || null
+                });
+            }
+        });
     });
 }
+// -------------------------------------------------
+// updateSlidersForLayer: aktif layer değişince çağrılır
+// -------------------------------------------------
+async function updateSlidersForLayer(groupLayer, newActiveLayer) {
+    // --- Normal sliders ---
+    const sliders = [
+        { id: "#uwallSlider", field: "Uwall" },
+        { id: "#uwindowSlider", field: "Uwindow" },
+        { id: "#uroofSlider", field: "Uroof" },
+        { id: "#ugroundSlider", field: "Uground" },
+        { id: "#shgcSlider", field: "SHGC" },
+        { id: "#infiltrationSlider", field: "Infiltration" },
+        { id: "#slideropexbase2025", field: "OPEX_BASE____" },
+        { id: "#slideropexbase2050", field: "OPEX_BASE____" },
+        { id: "#grossFloorSlider", field: "Gross_Floor_Area" },
+        { id: "#sliderQHeating2025", field: "F2025_BASE_Qheating" },
+        { id: "#sliderEquipment2025", field: "Equipment_Load_All_Scenarios" },
+        { id: "#sliderLighting2025", field: "Lighting_Load_All_Scenarios" },
+        { id: "#sliderEmission2025", field: "Emission_BASE__kg_CO2_" },
+        { id: "#sliderBasePV2025", field: "F2025_BASE_PV_Production_PV_" },
+        { id: "#sliderQHeating2050", field: "F2050_BASE_Qheating" },
+        { id: "#sliderEquipment2050", field: "Equipment_Load_All_Scenarios" },
+        { id: "#sliderLighting2050", field: "Lighting_Load_All_Scenarios" },
+        { id: "#sliderEmission2050", field: "Emission_BASE__kg_CO2_" },
+        { id: "#sliderBasePV2050", field: "F2050_BASE_PV_Production_PV_" }
+    ];
+
+    for (let s of sliders) {
+        const $el = $(s.id);
+        const inst = $el.data("ionRangeSlider");
+        if (!inst) continue;
+
+        let hasField = true, min = 0, max = 0;
+        try {
+            const mm = await getFieldMinMax(newActiveLayer, s.field);
+            min = mm.min; max = mm.max;
+            if (isNaN(min) || isNaN(max)) hasField = false;
+        } catch (e) {
+            hasField = false;
+        }
+
+        inst.update({
+            min: hasField ? min : 0,
+            max: hasField ? max : 1,
+            from: hasField ? min : 0,
+            to: hasField ? max : 1,
+            disable: !hasField
+        });
+    }
+
+    // --- IOD sliders ---
+    const iodSliders = [
+        {
+            id: "#sliderIOD2025",
+            field: "F2025_BASE_IOD",
+            values: ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"]
+        },
+        {
+            id: "#sliderIOD2050",
+            field: "F2050_BASE_IOD",
+            values: ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"]
+        }
+    ];
+
+    iodSliders.forEach(s => {
+        const $el = $(s.id);
+        const inst = $el.data("ionRangeSlider");
+        if (inst) inst.destroy();
+
+        $el.ionRangeSlider({
+            values: s.values,
+            grid: true,
+            onFinish: function (data) {
+                const selected = data.from_value;
+                filterScene({
+                    field: s.field,
+                    value: selected, // sadece seçilen yıl için filtre uygular
+                    layerName: newActiveLayer.title
+                });
+            }
+        });
+    });
+}
+
 // Filtreyi temizle
 function clearHighlighting() {
     highlightHandles.forEach(h => {
@@ -357,7 +486,6 @@ function enableFeatureTableRowClick(table) {
 
 $("#btnFilterClear").on("click", function () {
 
-
     //// Tüm sliderları resetle
     const sliders = [
         "#uwallSlider",
@@ -366,15 +494,18 @@ $("#btnFilterClear").on("click", function () {
         "#ugroundSlider",
         "#shgcSlider",
         "#infiltrationSlider",
+        "#slideropexbase",
         "#grossFloorSlider",
         "#sliderQHeating2025",
         "#sliderEquipment2025",
         "#sliderLighting2025",
         "#sliderEmission2025",
+        "#sliderBasePV2025",
         "#sliderQHeating2050",
         "#sliderEquipment2050",
         "#sliderLighting2050",
         "#sliderEmission2050",
+        "#sliderBasePV2050",
         "#sliderIOD2025",
         "#sliderIOD2050"
     ];
@@ -556,7 +687,7 @@ function setActiveWidget(type) {
                 returnGeometryEnabled: true,
                 view: view,
                 layer: activeLayer,
-                hiddenFields: ["Shape__Length", "Shape__Area", "OBJECTID"],
+                hiddenFields: ["Shape__Length", "Shape__Area", "OBJECTID", "Height", "LEVEL_ID", "LEVEL_NO", "Unit_NO", "TYPE", "function_encoded", "Years", "Elevation", "Elevation_Top"],
                 container: div,
                 actionColumnConfig: {
                     label: "Zoom to feature",
@@ -654,7 +785,6 @@ btnScenario.addEventListener("click", () => {
     }
 });
 
-
 // === GLOBAL CHART REFERANSLARI ===
 let radialBarChart;
 let barChart;
@@ -681,6 +811,12 @@ async function drawScenarioCharts() {
                 statisticType: type
             }));
             q.returnGeometry = false;
+
+            // 👇 Filtre varsa where'e dahil et
+            if (currentLayer.definitionExpression) {
+                q.where = currentLayer.definitionExpression;
+            }
+
             const res = await currentLayer.queryFeatures(q);
             return res.features?.[0]?.attributes ?? {};
         };
@@ -690,6 +826,12 @@ async function drawScenarioCharts() {
             const q = currentLayer.createQuery();
             q.outFields = fields.map(f => f.name);
             q.returnGeometry = false;
+
+            // 👇 Filtre varsa where'e dahil et
+            if (currentLayer.definitionExpression) {
+                q.where = currentLayer.definitionExpression;
+            }
+
             const res = await currentLayer.queryFeatures(q);
             return res.features ?? [];
         };
@@ -1034,175 +1176,175 @@ async function drawScenarioCharts() {
     }
 }
 
-function getAllScenarioValues() {
-    const scenarios = [];
+//function getAllScenarioValues() {
+//    const scenarios = [];
 
-    for (let i = 1; i <= 4; i++) {
-        //const yearSelect = document.querySelector(`#yearSelect${i}`);
-        //const selectedYear = yearSelect ? yearSelect.value : null;
-        const selectedYear = 2025
+//    for (let i = 1; i <= 4; i++) {
+//        //const yearSelect = document.querySelector(`#yearSelect${i}`);
+//        //const selectedYear = yearSelect ? yearSelect.value : null;
+//        const selectedYear = 2025
 
-        const baseRadio = document.querySelector(`#baseOption${i}`);
-        const enveRadio = document.querySelector(`#enveOption${i}`);
-        let selectedType = null;
-        if (baseRadio?.checked) selectedType = 'BASE';
-        else if (enveRadio?.checked) selectedType = 'Enve';
+//        const baseRadio = document.querySelector(`#baseOption${i}`);
+//        const enveRadio = document.querySelector(`#enveOption${i}`);
+//        let selectedType = null;
+//        if (baseRadio?.checked) selectedType = 'BASE';
+//        else if (enveRadio?.checked) selectedType = 'Enve';
 
-        const hpCheckbox = document.querySelector(`#hpOption${i}`);
-        const pvCheckbox = document.querySelector(`#pvOption${i}`);
-        const hpSelected = hpCheckbox?.checked || false;
-        const pvSelected = pvCheckbox?.checked || false;
+//        const hpCheckbox = document.querySelector(`#hpOption${i}`);
+//        const pvCheckbox = document.querySelector(`#pvOption${i}`);
+//        const hpSelected = hpCheckbox?.checked || false;
+//        const pvSelected = pvCheckbox?.checked || false;
 
-        scenarios.push({
-            year: selectedYear,
-            type: selectedType,
-            hp: hpSelected,
-            pv: pvSelected
-        });
-    }
+//        scenarios.push({
+//            year: selectedYear,
+//            type: selectedType,
+//            hp: hpSelected,
+//            pv: pvSelected
+//        });
+//    }
 
-    console.log(scenarios);
-    return scenarios;
-}
+//    console.log(scenarios);
+//    return scenarios;
+//}
 
-async function updateScenarioCharts() {
-    const scenarios = getAllScenarioValues();
-    if (!currentLayer) return console.warn("Görünür layer bulunamadı.");
+//async function updateScenarioCharts() {
+//    const scenarios = getAllScenarioValues();
+//    if (!currentLayer) return console.warn("Görünür layer bulunamadı.");
 
-    const means = [];
-    const boxStats = []; // BoxPlot için [min, q1, median, q3, max] dizilerini tutacak
-    const scenarioLabels = [];
+//    const means = [];
+//    const boxStats = []; // BoxPlot için [min, q1, median, q3, max] dizilerini tutacak
+//    const scenarioLabels = [];
 
-    for (let i = 0; i < scenarios.length; i++) {
-        const values = scenarios[i];
+//    for (let i = 0; i < scenarios.length; i++) {
+//        const values = scenarios[i];
 
-        // === Field adı oluştur ===
-        let fieldName = `F${values.year}_${values.type}`;
-        if (values.hp && values.pv) fieldName += "_HP_PV";
-        else if (values.hp) fieldName += "_HP";
-        else if (values.pv) fieldName += "_PV";
-        fieldName += "_Qheating";
+//        // === Field adı oluştur ===
+//        let fieldName = `F${values.year}_${values.type}`;
+//        if (values.hp && values.pv) fieldName += "_HP_PV";
+//        else if (values.hp) fieldName += "_HP";
+//        else if (values.pv) fieldName += "_PV";
+//        fieldName += "_Qheating";
 
-        // === Label oluştur ===
-        let label = `${values.year} ${values.type}`;
-        if (values.hp && values.pv) label += " (HP+PV)";
-        else if (values.hp) label += " (HP)";
-        else if (values.pv) label += " (PV)";
-        scenarioLabels.push(label);
+//        // === Label oluştur ===
+//        let label = `${values.year} ${values.type}`;
+//        if (values.hp && values.pv) label += " (HP+PV)";
+//        else if (values.hp) label += " (HP)";
+//        else if (values.pv) label += " (PV)";
+//        scenarioLabels.push(label);
 
-        // === Field kontrol ===
-        const exists = currentLayer.fields.some(f => f.name === fieldName);
-        if (!exists) {
-            console.warn(`Scenario ${i + 1}: Field mevcut değil ->`, fieldName);
-            means.push(null);
-            boxStats.push([0, 0, 0, 0, 0]);
-            continue;
-        }
+//        // === Field kontrol ===
+//        const exists = currentLayer.fields.some(f => f.name === fieldName);
+//        if (!exists) {
+//            console.warn(`Scenario ${i + 1}: Field mevcut değil ->`, fieldName);
+//            means.push(null);
+//            boxStats.push([0, 0, 0, 0, 0]);
+//            continue;
+//        }
 
-        try {
-            // === İstatistik sorgusu (mean, min, max, std) ===
-            const statQuery = currentLayer.createQuery();
-            statQuery.outStatistics = [
-                { onStatisticField: fieldName, outStatisticFieldName: "mean_value", statisticType: "avg" },
-                { onStatisticField: fieldName, outStatisticFieldName: "min_value", statisticType: "min" },
-                { onStatisticField: fieldName, outStatisticFieldName: "max_value", statisticType: "max" },
-                { onStatisticField: fieldName, outStatisticFieldName: "stddev_value", statisticType: "stddev" }
-            ];
+//        try {
+//            // === İstatistik sorgusu (mean, min, max, std) ===
+//            const statQuery = currentLayer.createQuery();
+//            statQuery.outStatistics = [
+//                { onStatisticField: fieldName, outStatisticFieldName: "mean_value", statisticType: "avg" },
+//                { onStatisticField: fieldName, outStatisticFieldName: "min_value", statisticType: "min" },
+//                { onStatisticField: fieldName, outStatisticFieldName: "max_value", statisticType: "max" },
+//                { onStatisticField: fieldName, outStatisticFieldName: "stddev_value", statisticType: "stddev" }
+//            ];
 
-            const statResult = await currentLayer.queryFeatures(statQuery);
-            const attrs = statResult.features[0]?.attributes ?? {};
+//            const statResult = await currentLayer.queryFeatures(statQuery);
+//            const attrs = statResult.features[0]?.attributes ?? {};
 
-            // --- Mean bar & radial ---
-            const meanValue = attrs.mean_value ?? null;
-            const roundedMean = meanValue !== null ? parseFloat(meanValue.toFixed(2)) : null;
-            means.push(roundedMean);
+//            // --- Mean bar & radial ---
+//            const meanValue = attrs.mean_value ?? null;
+//            const roundedMean = meanValue !== null ? parseFloat(meanValue.toFixed(2)) : null;
+//            means.push(roundedMean);
 
-            // --- BoxPlot ---
-            const min = attrs.min_value ?? 0;
-            const max = attrs.max_value ?? 0;
-            const median = meanValue ?? 0;
-            const std = attrs.stddev_value ?? 0;
-            const q1 = median - std;
-            const q3 = median + std;
-            boxStats.push([parseFloat(min.toFixed(2)), parseFloat(q1.toFixed(2)), parseFloat(median.toFixed(2)), parseFloat(q3.toFixed(2)), parseFloat(max.toFixed(2))]);
+//            // --- BoxPlot ---
+//            const min = attrs.min_value ?? 0;
+//            const max = attrs.max_value ?? 0;
+//            const median = meanValue ?? 0;
+//            const std = attrs.stddev_value ?? 0;
+//            const q1 = median - std;
+//            const q3 = median + std;
+//            boxStats.push([parseFloat(min.toFixed(2)), parseFloat(q1.toFixed(2)), parseFloat(median.toFixed(2)), parseFloat(q3.toFixed(2)), parseFloat(max.toFixed(2))]);
 
-        } catch (err) {
-            console.error(`Scenario ${i + 1} hata:`, err);
-            means.push(null);
-            boxStats.push([0, 0, 0, 0, 0]);
-        }
-    }
+//        } catch (err) {
+//            console.error(`Scenario ${i + 1} hata:`, err);
+//            means.push(null);
+//            boxStats.push([0, 0, 0, 0, 0]);
+//        }
+//    }
 
-    const colors = ["#4CAF50", "#2196F3", "#FF9800", "#E91E63"];
+//    const colors = ["#4CAF50", "#2196F3", "#FF9800", "#E91E63"];
 
-    // --- Radial Bar ---
-    if (radialBarChart) {
-        radialBarChart.updateOptions({ labels: scenarioLabels, colors: colors });
-        radialBarChart.updateSeries(means);
-    }
+//    // --- Radial Bar ---
+//    if (radialBarChart) {
+//        radialBarChart.updateOptions({ labels: scenarioLabels, colors: colors });
+//        radialBarChart.updateSeries(means);
+//    }
 
-    // --- Bar Chart ---
-    if (barChart) {
-        barChart.updateOptions({
-            chart: {
-                type: "bar",
-                animations: { enabled: true, easing: "easeinout", speed: 700 },
-                toolbar: { show: false }
-            },
-            xaxis: { categories: scenarioLabels, labels: { show: false } },
-            legend: { show: true, position: "bottom", horizontalAlign: "center" },
-            colors: colors,
-            plotOptions: { bar: { borderRadius: 6, columnWidth: "50%", distributed: true } },
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: "12px", fontWeight: "bold", colors: ["#000"] }, // Yazılar siyah
-                formatter: val => (val != null ? `${val.toFixed(2)}` : "-"),
-                offsetY: -10
-            },
-            tooltip: {
-                theme: "dark", // tooltip’in arka planını da isteğe göre ayarlayabilirsin
-                style: { fontSize: "12px", color: "#000" }, // yazıyı siyah yapıyoruz
-                y: { formatter: val => `${val?.toFixed(2)} kWh/m²` }
-            },
-            grid: { borderColor: "#ddd", strokeDashArray: 4 },
-        });
-        barChart.updateSeries([{ name: "Mean", data: means }]);
-    }
-
-
-    // --- Radar Chart ---
-    if (radarChart) {
-        radarChart.updateOptions({
-            labels: scenarioLabels,
-            colors: colors,
-            tooltip: {
-                theme: "dark",
-                style: { fontSize: "12px", color: "#000" },
-                y: { formatter: val => val?.toFixed(2) }
-            }
-        });
-        radarChart.updateSeries([{ name: "Mean", data: means }]);
-    }
-
-    // --- BoxPlot Chart ---
-    if (boxPlotChart) {
-        const boxData = boxStats.map((arr, i) => ({ x: scenarioLabels[i], y: arr }));
-        boxPlotChart.updateOptions({
-            colors: colors,
-            tooltip: {
-                theme: "dark",
-                style: { fontSize: "12px", color: "#000" },
-                y: { formatter: val => Array.isArray(val) ? val.map(v => v?.toFixed(2)).join(", ") : val?.toFixed(2) }
-            }
-        });
-        boxPlotChart.updateSeries([{ name: "Scenario Stats", data: boxData }]);
-    }
+//    // --- Bar Chart ---
+//    if (barChart) {
+//        barChart.updateOptions({
+//            chart: {
+//                type: "bar",
+//                animations: { enabled: true, easing: "easeinout", speed: 700 },
+//                toolbar: { show: false }
+//            },
+//            xaxis: { categories: scenarioLabels, labels: { show: false } },
+//            legend: { show: true, position: "bottom", horizontalAlign: "center" },
+//            colors: colors,
+//            plotOptions: { bar: { borderRadius: 6, columnWidth: "50%", distributed: true } },
+//            dataLabels: {
+//                enabled: true,
+//                style: { fontSize: "12px", fontWeight: "bold", colors: ["#000"] }, // Yazılar siyah
+//                formatter: val => (val != null ? `${val.toFixed(2)}` : "-"),
+//                offsetY: -10
+//            },
+//            tooltip: {
+//                theme: "dark", // tooltip’in arka planını da isteğe göre ayarlayabilirsin
+//                style: { fontSize: "12px", color: "#000" }, // yazıyı siyah yapıyoruz
+//                y: { formatter: val => `${val?.toFixed(2)} kWh/m²` }
+//            },
+//            grid: { borderColor: "#ddd", strokeDashArray: 4 },
+//        });
+//        barChart.updateSeries([{ name: "Mean", data: means }]);
+//    }
 
 
-}
+//    // --- Radar Chart ---
+//    if (radarChart) {
+//        radarChart.updateOptions({
+//            labels: scenarioLabels,
+//            colors: colors,
+//            tooltip: {
+//                theme: "dark",
+//                style: { fontSize: "12px", color: "#000" },
+//                y: { formatter: val => val?.toFixed(2) }
+//            }
+//        });
+//        radarChart.updateSeries([{ name: "Mean", data: means }]);
+//    }
 
-const createScenarioBtn = document.getElementById('btnCreateScenarios');
+//    // --- BoxPlot Chart ---
+//    if (boxPlotChart) {
+//        const boxData = boxStats.map((arr, i) => ({ x: scenarioLabels[i], y: arr }));
+//        boxPlotChart.updateOptions({
+//            colors: colors,
+//            tooltip: {
+//                theme: "dark",
+//                style: { fontSize: "12px", color: "#000" },
+//                y: { formatter: val => Array.isArray(val) ? val.map(v => v?.toFixed(2)).join(", ") : val?.toFixed(2) }
+//            }
+//        });
+//        boxPlotChart.updateSeries([{ name: "Scenario Stats", data: boxData }]);
+//    }
 
-createScenarioBtn.addEventListener('click', () => {
-    updateScenarioCharts();
-});
+
+//}
+
+//const createScenarioBtn = document.getElementById('btnCreateScenarios');
+
+//createScenarioBtn.addEventListener('click', () => {
+//    updateScenarioCharts();
+//});
