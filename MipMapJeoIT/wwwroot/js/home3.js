@@ -851,8 +851,145 @@ async function drawScenarioCharts() {
             slope: select("#slopeChart"),
             npvBox: select("#npvboxPlotChart"),
             roiBox: select("#roiboxPlotChart"),
-            capexOpex: select("#capexopexChart")
+            capexOpex: select("#capexopexChart"),
+            kwhBox: select("#kwhChart")
         };
+
+        // ---------- kWh/m2 STACKED BAR CHART (MEAN - HORIZONTAL) ----------
+        if (canvases.kwhBox) {
+            try {
+                // 🔹 Yıl tespiti (default 2025)
+                let year = "2025";
+                const defExp = currentLayer.definitionExpression?.toUpperCase() || "";
+                if (defExp.includes("2050")) year = "2050";
+
+                // 🔹 Senaryolar
+                const scenarios = [
+                    { key: "BASE", label: "BASE" },
+                    { key: "BASE_HP", label: "BASE + HP" },
+                    { key: "Enve", label: "ENVE" },
+                    { key: "Enve_HP", label: "ENVE + HP" }
+                ];
+
+                // 🔹 Qheating field'ları
+                const qHeatingFields = currentLayer.fields.filter(f =>
+                    scenarios.some(s => f.name === `F${year}_${s.key}_Qheating`)
+                );
+
+                if (!qHeatingFields.length) {
+                    console.warn("Qheating field bulunamadı.");
+                    return;
+                }
+
+                // 🔹 Sabit field'lar
+                const lightingField = currentLayer.fields.find(f => f.name === "Lighting_Load_All_Scenarios");
+                const equipmentField = currentLayer.fields.find(f => f.name === "Equipment_Load_All_Scenarios");
+
+                if (!lightingField || !equipmentField) {
+                    console.warn("Lighting / Equipment field bulunamadı.");
+                    return;
+                }
+
+                // 🔹 Tüm field'ları tek seferde sorgula
+                const allFields = [...qHeatingFields, lightingField, equipmentField];
+                const stats = await fetchStats(allFields, "avg");
+
+                // 🔹 Qheating değerleri (senaryoya özel)
+                const qHeatingData = [];
+                const labels = [];
+
+                scenarios.forEach(s => {
+                    const fieldName = `F${year}_${s.key}_Qheating`;
+                    const val = stats[`${fieldName}_avg`];
+
+                    if (typeof val === "number" && val > 0) {
+                        labels.push(s.label);
+                        qHeatingData.push(parseFloat(val.toFixed(2)));
+                    }
+                });
+
+                if (!qHeatingData.length) {
+                    console.warn("Qheating ortalama değeri bulunamadı.");
+                    return;
+                }
+
+                // 🔹 Sabit yükler (her senaryoya aynı)
+                const lightingMean = parseFloat(
+                    (stats[`${lightingField.name}_avg`] || 0).toFixed(2)
+                );
+
+                const equipmentMean = parseFloat(
+                    (stats[`${equipmentField.name}_avg`] || 0).toFixed(2)
+                );
+
+                const lightingData = new Array(qHeatingData.length).fill(lightingMean);
+                const equipmentData = new Array(qHeatingData.length).fill(equipmentMean);
+
+                // 🔹 Chart
+                new ApexCharts(canvases.kwhBox, {
+                    chart: {
+                        type: 'bar',
+                        height: 420,
+                        stacked: true,
+                        background: '#fff',
+                        toolbar: { show: true }
+                    },
+                    series: [
+                        {
+                            name: `Qheating (${year})`,
+                            data: qHeatingData
+                        },
+                        {
+                            name: "Lighting Load",
+                            data: lightingData
+                        },
+                        {
+                            name: "Equipment Load",
+                            data: equipmentData
+                        }
+                    ],
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            barHeight: '65%',
+                            borderRadius: 4
+                        }
+                    },
+                    xaxis: {
+                        title: { text: "kWh/m²" },
+                        labels: { formatter: v => v.toFixed(2) }
+                    },
+                    yaxis: {
+                        categories: labels,
+                        title: { text: "Senaryolar" }
+                    },
+                    tooltip: {
+                        theme: "dark",
+                        shared: true,
+                        intersect: false,
+                        y: { formatter: v => v.toFixed(2) + " kWh/m²" }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: v => v.toFixed(2),
+                        style: { fontSize: "11px" }
+                    },
+                    colors: ["#ff7043", "#42a5f5", "#9ccc65"],
+                    legend: {
+                        position: "top",
+                        horizontalAlign: "left"
+                    },
+                    title: {
+                        text: `Senaryolara Göre Ortalama Isıtma + İç Yükler (kWh/m²) – ${year}`,
+                        align: "center",
+                        style: { fontSize: "16px", fontWeight: "bold" }
+                    }
+                }).render();
+
+            } catch (err) {
+                logError("kWh/m2 Chart", err);
+            }
+        }
 
         // ---------- RADIAL BAR ----------
         if (canvases.radial) {
@@ -1174,177 +1311,5 @@ async function drawScenarioCharts() {
     } catch (globalErr) {
         console.error("💥 drawScenarioCharts genel hata:", globalErr);
     }
+
 }
-
-//function getAllScenarioValues() {
-//    const scenarios = [];
-
-//    for (let i = 1; i <= 4; i++) {
-//        //const yearSelect = document.querySelector(`#yearSelect${i}`);
-//        //const selectedYear = yearSelect ? yearSelect.value : null;
-//        const selectedYear = 2025
-
-//        const baseRadio = document.querySelector(`#baseOption${i}`);
-//        const enveRadio = document.querySelector(`#enveOption${i}`);
-//        let selectedType = null;
-//        if (baseRadio?.checked) selectedType = 'BASE';
-//        else if (enveRadio?.checked) selectedType = 'Enve';
-
-//        const hpCheckbox = document.querySelector(`#hpOption${i}`);
-//        const pvCheckbox = document.querySelector(`#pvOption${i}`);
-//        const hpSelected = hpCheckbox?.checked || false;
-//        const pvSelected = pvCheckbox?.checked || false;
-
-//        scenarios.push({
-//            year: selectedYear,
-//            type: selectedType,
-//            hp: hpSelected,
-//            pv: pvSelected
-//        });
-//    }
-
-//    console.log(scenarios);
-//    return scenarios;
-//}
-
-//async function updateScenarioCharts() {
-//    const scenarios = getAllScenarioValues();
-//    if (!currentLayer) return console.warn("Görünür layer bulunamadı.");
-
-//    const means = [];
-//    const boxStats = []; // BoxPlot için [min, q1, median, q3, max] dizilerini tutacak
-//    const scenarioLabels = [];
-
-//    for (let i = 0; i < scenarios.length; i++) {
-//        const values = scenarios[i];
-
-//        // === Field adı oluştur ===
-//        let fieldName = `F${values.year}_${values.type}`;
-//        if (values.hp && values.pv) fieldName += "_HP_PV";
-//        else if (values.hp) fieldName += "_HP";
-//        else if (values.pv) fieldName += "_PV";
-//        fieldName += "_Qheating";
-
-//        // === Label oluştur ===
-//        let label = `${values.year} ${values.type}`;
-//        if (values.hp && values.pv) label += " (HP+PV)";
-//        else if (values.hp) label += " (HP)";
-//        else if (values.pv) label += " (PV)";
-//        scenarioLabels.push(label);
-
-//        // === Field kontrol ===
-//        const exists = currentLayer.fields.some(f => f.name === fieldName);
-//        if (!exists) {
-//            console.warn(`Scenario ${i + 1}: Field mevcut değil ->`, fieldName);
-//            means.push(null);
-//            boxStats.push([0, 0, 0, 0, 0]);
-//            continue;
-//        }
-
-//        try {
-//            // === İstatistik sorgusu (mean, min, max, std) ===
-//            const statQuery = currentLayer.createQuery();
-//            statQuery.outStatistics = [
-//                { onStatisticField: fieldName, outStatisticFieldName: "mean_value", statisticType: "avg" },
-//                { onStatisticField: fieldName, outStatisticFieldName: "min_value", statisticType: "min" },
-//                { onStatisticField: fieldName, outStatisticFieldName: "max_value", statisticType: "max" },
-//                { onStatisticField: fieldName, outStatisticFieldName: "stddev_value", statisticType: "stddev" }
-//            ];
-
-//            const statResult = await currentLayer.queryFeatures(statQuery);
-//            const attrs = statResult.features[0]?.attributes ?? {};
-
-//            // --- Mean bar & radial ---
-//            const meanValue = attrs.mean_value ?? null;
-//            const roundedMean = meanValue !== null ? parseFloat(meanValue.toFixed(2)) : null;
-//            means.push(roundedMean);
-
-//            // --- BoxPlot ---
-//            const min = attrs.min_value ?? 0;
-//            const max = attrs.max_value ?? 0;
-//            const median = meanValue ?? 0;
-//            const std = attrs.stddev_value ?? 0;
-//            const q1 = median - std;
-//            const q3 = median + std;
-//            boxStats.push([parseFloat(min.toFixed(2)), parseFloat(q1.toFixed(2)), parseFloat(median.toFixed(2)), parseFloat(q3.toFixed(2)), parseFloat(max.toFixed(2))]);
-
-//        } catch (err) {
-//            console.error(`Scenario ${i + 1} hata:`, err);
-//            means.push(null);
-//            boxStats.push([0, 0, 0, 0, 0]);
-//        }
-//    }
-
-//    const colors = ["#4CAF50", "#2196F3", "#FF9800", "#E91E63"];
-
-//    // --- Radial Bar ---
-//    if (radialBarChart) {
-//        radialBarChart.updateOptions({ labels: scenarioLabels, colors: colors });
-//        radialBarChart.updateSeries(means);
-//    }
-
-//    // --- Bar Chart ---
-//    if (barChart) {
-//        barChart.updateOptions({
-//            chart: {
-//                type: "bar",
-//                animations: { enabled: true, easing: "easeinout", speed: 700 },
-//                toolbar: { show: false }
-//            },
-//            xaxis: { categories: scenarioLabels, labels: { show: false } },
-//            legend: { show: true, position: "bottom", horizontalAlign: "center" },
-//            colors: colors,
-//            plotOptions: { bar: { borderRadius: 6, columnWidth: "50%", distributed: true } },
-//            dataLabels: {
-//                enabled: true,
-//                style: { fontSize: "12px", fontWeight: "bold", colors: ["#000"] }, // Yazılar siyah
-//                formatter: val => (val != null ? `${val.toFixed(2)}` : "-"),
-//                offsetY: -10
-//            },
-//            tooltip: {
-//                theme: "dark", // tooltip’in arka planını da isteğe göre ayarlayabilirsin
-//                style: { fontSize: "12px", color: "#000" }, // yazıyı siyah yapıyoruz
-//                y: { formatter: val => `${val?.toFixed(2)} kWh/m²` }
-//            },
-//            grid: { borderColor: "#ddd", strokeDashArray: 4 },
-//        });
-//        barChart.updateSeries([{ name: "Mean", data: means }]);
-//    }
-
-
-//    // --- Radar Chart ---
-//    if (radarChart) {
-//        radarChart.updateOptions({
-//            labels: scenarioLabels,
-//            colors: colors,
-//            tooltip: {
-//                theme: "dark",
-//                style: { fontSize: "12px", color: "#000" },
-//                y: { formatter: val => val?.toFixed(2) }
-//            }
-//        });
-//        radarChart.updateSeries([{ name: "Mean", data: means }]);
-//    }
-
-//    // --- BoxPlot Chart ---
-//    if (boxPlotChart) {
-//        const boxData = boxStats.map((arr, i) => ({ x: scenarioLabels[i], y: arr }));
-//        boxPlotChart.updateOptions({
-//            colors: colors,
-//            tooltip: {
-//                theme: "dark",
-//                style: { fontSize: "12px", color: "#000" },
-//                y: { formatter: val => Array.isArray(val) ? val.map(v => v?.toFixed(2)).join(", ") : val?.toFixed(2) }
-//            }
-//        });
-//        boxPlotChart.updateSeries([{ name: "Scenario Stats", data: boxData }]);
-//    }
-
-
-//}
-
-//const createScenarioBtn = document.getElementById('btnCreateScenarios');
-
-//createScenarioBtn.addEventListener('click', () => {
-//    updateScenarioCharts();
-//});
