@@ -67,7 +67,6 @@
     "@arcgis/core/widgets/FeatureTable.js"
 ]);
 
-// Load webscene and display it in a SceneView
 let homeCamera;
 let activeWidget = null;
 let sceneLayerView;
@@ -858,10 +857,8 @@ async function drawScenarioCharts() {
         // ---------- kWh/m2 STACKED BAR CHART (MEAN - HORIZONTAL) ----------
         if (canvases.kwhBox) {
             try {
-                // 🔹 Yıl tespiti (default 2025)
-                let year = "2025";
-                const defExp = currentLayer.definitionExpression?.toUpperCase() || "";
-                if (defExp.includes("2050")) year = "2050";
+                const yearDropdown = document.getElementById("yearDropdown");
+                const year = yearDropdown?.value || "2025";
 
                 // 🔹 Senaryolar
                 const scenarios = [
@@ -882,21 +879,25 @@ async function drawScenarioCharts() {
                 }
 
                 // 🔹 Sabit field'lar
-                const lightingField = currentLayer.fields.find(f => f.name === "Lighting_Load_All_Scenarios");
-                const equipmentField = currentLayer.fields.find(f => f.name === "Equipment_Load_All_Scenarios");
+                const lightingField = currentLayer.fields.find(
+                    f => f.name === "Lighting_Load_All_Scenarios"
+                );
+
+                const equipmentField = currentLayer.fields.find(
+                    f => f.name === "Equipment_Load_All_Scenarios"
+                );
 
                 if (!lightingField || !equipmentField) {
                     console.warn("Lighting / Equipment field bulunamadı.");
                     return;
                 }
 
-                // 🔹 Tüm field'ları tek seferde sorgula
                 const allFields = [...qHeatingFields, lightingField, equipmentField];
                 const stats = await fetchStats(allFields, "avg");
 
-                // 🔹 Qheating değerleri (senaryoya özel)
-                const qHeatingData = [];
+                // 🔹 Qheating (senaryoya göre)
                 const labels = [];
+                const qHeatingData = [];
 
                 scenarios.forEach(s => {
                     const fieldName = `F${year}_${s.key}_Qheating`;
@@ -904,7 +905,7 @@ async function drawScenarioCharts() {
 
                     if (typeof val === "number" && val > 0) {
                         labels.push(s.label);
-                        qHeatingData.push(parseFloat(val.toFixed(2)));
+                        qHeatingData.push(+val.toFixed(2));
                     }
                 });
 
@@ -913,25 +914,25 @@ async function drawScenarioCharts() {
                     return;
                 }
 
-                // 🔹 Sabit yükler (her senaryoya aynı)
-                const lightingMean = parseFloat(
-                    (stats[`${lightingField.name}_avg`] || 0).toFixed(2)
-                );
-
-                const equipmentMean = parseFloat(
-                    (stats[`${equipmentField.name}_avg`] || 0).toFixed(2)
-                );
+                // 🔹 Sabit yükler (tüm senaryolar için aynı)
+                const lightingMean = +(stats[`${lightingField.name}_avg`] || 0).toFixed(2);
+                const equipmentMean = +(stats[`${equipmentField.name}_avg`] || 0).toFixed(2);
 
                 const lightingData = new Array(qHeatingData.length).fill(lightingMean);
                 const equipmentData = new Array(qHeatingData.length).fill(equipmentMean);
 
+                // 🔥 Eski chart'ı temizle
+                if (canvases.kwhBox._chart) {
+                    canvases.kwhBox._chart.destroy();
+                }
+
                 // 🔹 Chart
-                new ApexCharts(canvases.kwhBox, {
+                canvases.kwhBox._chart = new ApexCharts(canvases.kwhBox, {
                     chart: {
-                        type: 'bar',
+                        type: "bar",
                         height: 420,
                         stacked: true,
-                        background: '#fff',
+                        background: "#fff",
                         toolbar: { show: true }
                     },
                     series: [
@@ -951,13 +952,15 @@ async function drawScenarioCharts() {
                     plotOptions: {
                         bar: {
                             horizontal: true,
-                            barHeight: '65%',
+                            barHeight: "65%",
                             borderRadius: 4
                         }
                     },
                     xaxis: {
                         title: { text: "kWh/m²" },
-                        labels: { formatter: v => v.toFixed(2) }
+                        labels: {
+                            formatter: v => v.toFixed(2)
+                        }
                     },
                     yaxis: {
                         categories: labels,
@@ -967,12 +970,16 @@ async function drawScenarioCharts() {
                         theme: "dark",
                         shared: true,
                         intersect: false,
-                        y: { formatter: v => v.toFixed(2) + " kWh/m²" }
+                        y: {
+                            formatter: v => `${v.toFixed(2)} kWh/m²`
+                        }
                     },
                     dataLabels: {
                         enabled: true,
                         formatter: v => v.toFixed(2),
-                        style: { fontSize: "11px" }
+                        style: {
+                            fontSize: "11px"
+                        }
                     },
                     colors: ["#ff7043", "#42a5f5", "#9ccc65"],
                     legend: {
@@ -982,12 +989,17 @@ async function drawScenarioCharts() {
                     title: {
                         text: `Senaryolara Göre Ortalama Isıtma + İç Yükler (kWh/m²) – ${year}`,
                         align: "center",
-                        style: { fontSize: "16px", fontWeight: "bold" }
+                        style: {
+                            fontSize: "16px",
+                            fontWeight: "bold"
+                        }
                     }
-                }).render();
+                });
+
+                canvases.kwhBox._chart.render();
 
             } catch (err) {
-                logError("kWh/m2 Chart", err);
+                logError("kWh/m² Chart", err);
             }
         }
 
@@ -1069,7 +1081,6 @@ async function drawScenarioCharts() {
                             })
                             .filter(v => !isNaN(v));
                         const maxVal = values.length ? Math.max(...values) : 0;
-                        // orijinalde toFixed(2) vardı; tooltip ve gösterim için string'e çevirme burada korunuyor
                         seriesMap[year].push(parseFloat(maxVal.toFixed(2)));
                     });
                 });
@@ -1103,12 +1114,12 @@ async function drawScenarioCharts() {
 
                 if (!allFields.length) return console.warn("Slope için field bulunamadı.");
 
-                const attrs = await fetchStats(allFields, "avg");
+                const attrs = await fetchStats(allFields, "sum");
 
                 const scenarioNames = ["BASE_PV", "BASE_HP", "BASE_HP_PV", "Enve", "Enve_PV", "Enve_HP", "Enve_HP_PV"];
 
                 const getMeanValue = (prefix, scenario) => {
-                    const key = Object.keys(attrs).find(k => k.startsWith(prefix) && k.includes(scenario) && k.endsWith("_avg"));
+                    const key = Object.keys(attrs).find(k => k.startsWith(prefix) && k.includes(scenario) && k.endsWith("_sum"));
                     if (!key) return 0;
                     const raw = attrs[key];
                     // Orijinalde parseFloat(meanVal.toFixed(2)) kullanıldı — bunu koruyoruz
@@ -1261,14 +1272,13 @@ async function drawScenarioCharts() {
                 const fields = currentLayer.fields.filter(f => f.name.startsWith("CAPEX_") || f.name.startsWith("OPEX_"));
                 if (!fields.length) return console.warn("CAPEX/OPEX field bulunamadı.");
 
-                const attrs = await fetchStats(fields, "avg");
+                const attrs = await fetchStats(fields, "sum");
 
                 const collect = prefix => {
                     const out = {};
                     fields.filter(f => f.name.startsWith(prefix)).forEach(f => {
                         const scenario = f.name.replace(prefix, "").replace(/_+$/, "");
-                        const raw = attrs[`${f.name}_avg`];
-                        // orijinalde parseFloat(meanVal.toFixed(2)) kullanılmıştı
+                        const raw = attrs[`${f.name}_sum`];
                         out[scenario] = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : parseFloat(Number(raw || 0).toFixed(2));
                     });
                     return out;
@@ -1284,8 +1294,8 @@ async function drawScenarioCharts() {
                 new ApexCharts(canvases.capexOpex, {
                     chart: { type: 'bar', stacked: true, height: 400, background: '#fff', toolbar: { show: true } },
                     series: [
-                        { name: "CAPEX (x̄)", data: capexSeries },
-                        { name: "OPEX (x̄)", data: opexSeries }
+                        { name: "CAPEX (Σ)", data: capexSeries },
+                        { name: "OPEX (Σ)", data: opexSeries }
                     ],
                     xaxis: { categories: scenarioNames, title: { text: "Senaryo" } },
                     yaxis: {
@@ -1302,14 +1312,14 @@ async function drawScenarioCharts() {
                     legend: { position: "top", horizontalAlign: "left" },
                     plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 } },
                     dataLabels: { enabled: true, formatter: val => formatKM(val), style: { fontSize: '11px', colors: ['#000'] } },
-                    title: { text: "Senaryolara Göre Ortalama CAPEX - OPEX Maliyetleri (x̄)", align: 'center' }
+                    title: { text: "Senaryolara Göre Toplam CAPEX - OPEX Maliyetleri (Σ)", align: 'center' }
                 }).render();
 
             } catch (err) { logError("CAPEX/OPEX Chart", err); }
         }
 
     } catch (globalErr) {
-        console.error("💥 drawScenarioCharts genel hata:", globalErr);
+        console.error("drawScenarioCharts genel hata:", globalErr);
     }
 
 }
