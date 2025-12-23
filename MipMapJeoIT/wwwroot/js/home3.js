@@ -6,7 +6,7 @@
     DirectLineMeasurement3D, AreaMeasurement3D, ElevationProfile, Daylight, Weather, webMercatorUtils,
     Bookmarks, Bookmark, Point, TileLayer, ElevationLayer, GroupLayer, Editor, Polygon, LabelClass,
     config, WebTileLayer, ClassBreaksRenderer, LineOfSight, IntegratedMesh3DTilesLayer, SpatialReference,
-    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer, FeatureTable
+    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer, FeatureTable, Legend
 ] = await $arcgis.import([
     "@arcgis/core/Map.js",
     "@arcgis/core/layers/SceneLayer.js",
@@ -64,7 +64,8 @@
     "@arcgis/core/analysis/ViewshedAnalysis.js",
     "@arcgis/core/analysis/Viewshed.js",
     "@arcgis/core/layers/OrientedImageryLayer.js",
-    "@arcgis/core/widgets/FeatureTable.js"
+    "@arcgis/core/widgets/FeatureTable.js",
+    "@arcgis/core/widgets/Legend"
 ]);
 
 let homeCamera;
@@ -90,17 +91,33 @@ const view = new SceneView({
 });
 window.view = view;
 
-
-
 const layerList = new LayerList({
-    view: view,
+    view: view
 });
-const expnad = new Expand({
+
+const layerListExpand = new Expand({
     view: view,
     content: layerList,
-    expanded: false
+    expanded: false,
+    group: "top-left-tools"
 });
-view.ui.add(expnad, "top-left");
+
+view.ui.add(layerListExpand, "top-left");
+
+
+const legend = new Legend({
+    view: view
+});
+
+const legendExpand = new Expand({
+    view: view,
+    content: legend,
+    expanded: false,
+    group: "top-left-tools"
+});
+
+view.ui.add(legendExpand, "top-left");
+
 
 view.when(() => {
     $('[data-button="toolbar"]').on('click', toolbarButton_onClick);
@@ -854,6 +871,186 @@ async function drawScenarioCharts() {
             kwhBox: select("#kwhChart")
         };
 
+        // ---------- CAPEX / OPEX ----------
+        if (canvases.capexOpex) {
+            try {
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("OPEX_") || f.name.startsWith("CAPEX_"));
+                if (!fields.length) return console.warn("CAPEX/OPEX field bulunamadı.");
+
+                const attrs = await fetchStats(fields, "sum");
+
+                const collect = prefix => {
+                    const out = {};
+                    fields.filter(f => f.name.startsWith(prefix)).forEach(f => {
+                        const scenario = f.name.replace(prefix, "").replace(/_+$/, "");
+                        const raw = attrs[`${f.name}_sum`];
+                        out[scenario] = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : parseFloat(Number(raw || 0).toFixed(2));
+                    });
+                    return out;
+                };
+                const opex = collect("OPEX_");
+                const capex = collect("CAPEX_");
+
+                const scenarioNames = Array.from(new Set([...Object.keys(capex), ...Object.keys(opex)]));
+                const baseIndex = scenarioNames.indexOf("BASE");
+                if (baseIndex > 0) {
+                    scenarioNames.unshift(scenarioNames.splice(baseIndex, 1)[0]);///base en başa
+                }
+                const opexSeries = scenarioNames.map(s => opex[s] || 0);
+                const capexSeries = scenarioNames.map(s => capex[s] || 0);
+
+                new ApexCharts(canvases.capexOpex, {
+                    chart: { type: 'bar', stacked: true, height: 400, background: '#fff', toolbar: { show: true } },
+                    series: [
+                        { name: "OPEX (Σ)", data: opexSeries },
+                        { name: "CAPEX (Σ)", data: capexSeries },
+                    ],
+                    xaxis: { categories: scenarioNames, title: { text: "Senaryo" } },
+                    yaxis: {
+                        title: { text: "Total Cost (TCO)" },
+                        labels: { formatter: val => formatKM(val) }
+                    },
+                    tooltip: {
+                        theme: "dark", // ORIJINAL: theme dark
+                        shared: true,
+                        intersect: false,
+                        y: { formatter: val => formatKM(val) } // ORIJINAL: y.formatter kullanılıyordu
+                    },
+                    colors: ["#FFB300", "#1976D2"],
+                    legend: { position: "top", horizontalAlign: "left" },
+                    plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 } },
+                    dataLabels: { enabled: true, formatter: val => formatKM(val), style: { fontSize: '11px', colors: ['#000'] } },
+                    title: { text: "Total CAPEX and OPEX", align: 'center' }
+                }).render();
+
+            } catch (err) { logError("CAPEX/OPEX Chart", err); }
+        }
+
+        // ---------- ROI BOX PLOT ----------
+        if (canvases.roiBox) {
+            try {
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_"));
+                if (!fields.length) {
+                    console.warn("ROI field bulunamadı.");
+                    return;
+                }
+
+                const features = await fetchValues(fields);
+                if (!features.length) {
+                    console.warn("ROI verisi bulunamadı.");
+                    return;
+                }
+
+                const seriesData = fields.map(f => {
+
+                    const rawVals = features
+                        .map(feat => feat.attributes[f.name])
+                        .filter(v => v != null);
+
+                    if (!rawVals.length) return null;
+
+                    const scenarioName = (f.alias || f.name).replace(/^ROI[_ ]?/, "");
+
+                    let values = rawVals
+                        .map(v => Number(String(v).replace(",", ".")))
+                        .filter(v => !isNaN(v));
+
+                    // 🔹 SADECE BASE_HP için ABS
+                    if (scenarioName.toUpperCase() === "BASE_HP") {
+                        values = values.map(v => Math.abs(v));
+                    }
+
+                    values.sort((a, b) => a - b);
+
+                    if (!values.length) return null;
+
+                    const min = values[0];
+                    const q1 = values[Math.floor(values.length * 0.25)];
+                    const median = values[Math.floor(values.length * 0.5)];
+                    const q3 = values[Math.floor(values.length * 0.75)];
+                    const max = values[values.length - 1];
+
+                    let maskedMin = min;
+
+                    if (scenarioName.toUpperCase() === "BASE_HP") {
+                        const iqr = q3 - q1;
+                        const lowerFence = q1 - 1.5 * iqr;
+
+                        maskedMin = Math.max(min, lowerFence);
+                    }
+
+                    return {
+                        x: scenarioName,
+                        y: [maskedMin, q1, median, q3, max],
+                        __realMin: min // tooltip’te istersek gösteririz
+                    };
+
+
+                }).filter(Boolean);
+
+                if (!seriesData.length) {
+                    console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
+                    return;
+                }
+
+                new ApexCharts(canvases.roiBox, {
+                    chart: {
+                        type: 'boxPlot',
+                        height: 450,
+                        background: '#fff',
+                        toolbar: { show: true }
+                    },
+                    series: [{
+                        name: 'ROI',
+                        data: seriesData
+                    }],
+                    colors: ["#4bc0c0"],
+                    tooltip: {
+                        theme: "dark",
+                        shared: true,
+                        custom: function ({ seriesIndex, dataPointIndex, w }) {
+                            const data = w.config.series[seriesIndex].data[dataPointIndex];
+                            const y = data.y;
+                            const name = data.x;
+
+                            return `
+                        <div style="padding:6px">
+                            <strong>${name}</strong><br/>
+                            Min: ${y[0].toFixed(2)}%<br/>
+                            Q1: ${y[1].toFixed(2)}%<br/>
+                            Medyan: ${y[2].toFixed(2)}%<br/>
+                            Q3: ${y[3].toFixed(2)}%<br/>
+                            Max: ${y[4].toFixed(2)}%
+                            ${name.toUpperCase() === "BASE_HP"
+                                    ? "<br/><em style='font-size:11px'>(ABS uygulanmıştır)</em>"
+                                    : ""}
+                        </div>`;
+                        }
+                    },
+                    yaxis: {
+                        title: { text: 'ROI (%)' },
+                        labels: {
+                            formatter: val => val.toFixed(2) + "%"
+                        }
+                    },
+                    xaxis: {
+                        title: { text: 'Senaryolar' }
+                    },
+                    title: {
+                        text: 'Return On Investment (ROI)',
+                        align: 'center',
+                        style: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
+                    }
+                }).render();
+
+            } catch (err) {
+                logError("ROI Box", err);
+            }
+        }
+
         // ---------- kWh/m2 STACKED BAR CHART (MEAN - HORIZONTAL) ----------
         if (canvases.kwhBox) {
             try {
@@ -1210,112 +1407,6 @@ async function drawScenarioCharts() {
                 }).render();
 
             } catch (err) { logError("NPV Box", err); }
-        }
-
-        // ---------- ROI BOX PLOT ----------
-        if (canvases.roiBox) {
-            try {
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_"));
-                if (!fields.length) return console.warn("ROI field bulunamadı.");
-
-                const features = await fetchValues(fields);
-                if (!features.length) return console.warn("ROI verisi bulunamadı.");
-
-                const seriesData = fields.map(f => {
-                    const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
-                    const values = rawVals.map(v => parseFloat(String(v).replace(",", "."))).filter(v => !isNaN(v)).sort((a, b) => a - b);
-                    if (!values.length) return null;
-                    const min = values[0];
-                    const q1 = values[Math.floor(values.length * 0.25)];
-                    const median = values[Math.floor(values.length * 0.5)];
-                    const q3 = values[Math.floor(values.length * 0.75)];
-                    const max = values[values.length - 1];
-                    return { x: (f.alias || f.name).replace(/^ROI[_ ]?/, ""), y: [min, q1, median, q3, max] };
-                }).filter(Boolean);
-
-                if (!seriesData.length) return console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
-
-                new ApexCharts(canvases.roiBox, {
-                    chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
-                    series: [{ name: 'ROI', data: seriesData }],
-                    colors: ["#4bc0c0"],
-                    tooltip: {
-                        theme: "dark", // ORIJINAL: theme dark
-                        shared: true,
-                        custom: function ({ seriesIndex, dataPointIndex, w }) {
-                            const y = w.config.series[seriesIndex].data[dataPointIndex].y;
-                            const name = w.config.series[seriesIndex].data[dataPointIndex].x;
-                            return `<div style="padding:5px">
-                                <strong>${name}</strong><br/>
-                                Min: ${y[0].toFixed(2)}%<br/>
-                                Q1: ${y[1].toFixed(2)}%<br/>
-                                Medyan: ${y[2].toFixed(2)}%<br/>
-                                Q3: ${y[3].toFixed(2)}%<br/>
-                                Max: ${y[4].toFixed(2)}%
-                            </div>`;
-                        }
-                    },
-                    yaxis: {
-                        title: { text: 'ROI (%)' },
-                        labels: { formatter: val => val.toFixed(2) + "%" } // ORIJINAL: toFixed(2) korunuyor
-                    },
-                    xaxis: { title: { text: 'Senaryolar' } },
-                    title: { text: 'Senaryo Bazlı ROI Boxplot', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
-                }).render();
-
-            } catch (err) { logError("ROI Box", err); }
-        }
-
-        // ---------- CAPEX / OPEX ----------
-        if (canvases.capexOpex) {
-            try {
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("CAPEX_") || f.name.startsWith("OPEX_"));
-                if (!fields.length) return console.warn("CAPEX/OPEX field bulunamadı.");
-
-                const attrs = await fetchStats(fields, "sum");
-
-                const collect = prefix => {
-                    const out = {};
-                    fields.filter(f => f.name.startsWith(prefix)).forEach(f => {
-                        const scenario = f.name.replace(prefix, "").replace(/_+$/, "");
-                        const raw = attrs[`${f.name}_sum`];
-                        out[scenario] = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : parseFloat(Number(raw || 0).toFixed(2));
-                    });
-                    return out;
-                };
-
-                const capex = collect("CAPEX_");
-                const opex = collect("OPEX_");
-                const scenarioNames = Array.from(new Set([...Object.keys(capex), ...Object.keys(opex)]));
-
-                const capexSeries = scenarioNames.map(s => capex[s] || 0);
-                const opexSeries = scenarioNames.map(s => opex[s] || 0);
-
-                new ApexCharts(canvases.capexOpex, {
-                    chart: { type: 'bar', stacked: true, height: 400, background: '#fff', toolbar: { show: true } },
-                    series: [
-                        { name: "CAPEX (Σ)", data: capexSeries },
-                        { name: "OPEX (Σ)", data: opexSeries }
-                    ],
-                    xaxis: { categories: scenarioNames, title: { text: "Senaryo" } },
-                    yaxis: {
-                        title: { text: "Ortalama Maliyet" },
-                        labels: { formatter: val => formatKM(val) }
-                    },
-                    tooltip: {
-                        theme: "dark", // ORIJINAL: theme dark
-                        shared: true,
-                        intersect: false,
-                        y: { formatter: val => formatKM(val) } // ORIJINAL: y.formatter kullanılıyordu
-                    },
-                    colors: ["#1976D2", "#FFB300"],
-                    legend: { position: "top", horizontalAlign: "left" },
-                    plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 } },
-                    dataLabels: { enabled: true, formatter: val => formatKM(val), style: { fontSize: '11px', colors: ['#000'] } },
-                    title: { text: "Senaryolara Göre Toplam CAPEX - OPEX Maliyetleri (Σ)", align: 'center' }
-                }).render();
-
-            } catch (err) { logError("CAPEX/OPEX Chart", err); }
         }
 
     } catch (globalErr) {
