@@ -1375,30 +1375,33 @@ async function drawScenarioCharts() {
         // ---------- RADIAL BAR ----------
         if (canvases.radial) {
             try {
+                // Payback alanlarını filtrele
                 const fields = currentLayer.fields.filter(f => f.name.startsWith("Payback_"));
                 if (!fields.length) return console.warn("Payback alanı bulunamadı.");
 
+                // Maksimum değerleri API’dan çekiyoruz
                 const stats = await fetchStats(fields, "max");
 
-                const filteredData = fields
-                    .map(f => {
-                        const raw = stats[`${f.name}_max`];
-                        const value = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : 0;
-                        return {
-                            label: (f.alias || f.name).replace(/^Payback[_ ]?/, "").replace(/_/g, " ").trim(),
-                            value
-                        };
-                    })
-                    .filter(item => item.value > 0);
-
-                if (!filteredData.length) return console.warn("Radial için geçerli Payback verisi yok.");
+                const MAX_PAYBACK = 45; // Boş olanlara atanacak değer
+                const filteredData = fields.map(f => {
+                    let raw = stats[`${f.name}_max`];
+                    if (raw === null || raw === undefined) raw = MAX_PAYBACK;
+                    const value = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : MAX_PAYBACK;
+                    return {
+                        label: (f.alias || f.name)
+                            .replace(/^Payback[_ ]?/, "")
+                            .replace(/_/g, " ")
+                            .trim(),
+                        value
+                    };
+                });
 
                 const series = filteredData.map(d => d.value);
                 const labels = filteredData.map(d => d.label);
                 const maxValue = Math.max(...series).toFixed(2);
 
                 new ApexCharts(canvases.radial, {
-                    chart: { type: 'radialBar', height: 350 },
+                    chart: { type: 'radialBar', height: 550 },
                     series,
                     labels,
                     colors: ["#36a2eb", "#ff6384", "#ffcd56", "#4bc0c0", "#9966ff", "#ff9f40", "#8a89a6"],
@@ -1408,21 +1411,37 @@ async function drawScenarioCharts() {
                             track: { strokeWidth: '100%' },
                             dataLabels: {
                                 name: { show: true, fontSize: '16px' },
-                                value: { show: true },
+                                value: {
+                                    show: true,
+                                    formatter: function (val) {
+                                        return `${val} yıl`; // halkanın üstündeki değer sadece yıl
+                                    }
+                                },
                                 total: {
                                     show: true,
                                     label: 'Maks.',
-                                    formatter: () => `${maxValue} yıl`
+                                    formatter: () => `${maxValue} yıl` // merkeze maksimum değeri yaz
                                 }
                             }
                         }
                     },
+                    tooltip: {
+                        theme: "dark",
+                        shared: false,
+                        followCursor: true,
+                        y: {
+                            formatter: function (val) {
+                                return `${val} yıl`; // tooltip sadece değeri gösterir, yüzde yok
+                            }
+                        }
+                    },
                     legend: { show: true, position: 'bottom' },
-                    tooltip: { theme: "dark" }, // koyu tema orijinalde yoksa eklenmez demiştin; ama diğer grafikleri korumak için burada dark bırakıyorum
                     title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' },
                 }).render();
 
-            } catch (err) { logError("Radial Chart", err); }
+            } catch (err) {
+                console.error("Radial Chart Hatası:", err);
+            }
         }
 
         // ---------- RADAR ----------
@@ -1464,7 +1483,7 @@ async function drawScenarioCharts() {
                     plotOptions: { radar: { polygons: { strokeColors: '#e0e0e0' } } },
                     tooltip: { theme: "dark" }, // ORIJINAL: tooltip.theme: "dark"
                     legend: { position: 'top' },
-                    title: { text: "PV'siz IOD Değerleri - Yıllara Göre" },
+                    title: { text: "2025-2050 Indoor Overheating Degree (IOD)" },
                     colors: ["#36a2eb", "#ff6384"]
                 }).render();
 
