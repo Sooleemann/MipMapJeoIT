@@ -905,7 +905,7 @@ async function drawScenarioCharts() {
                         { name: "OPEX (Σ)", data: opexSeries },
                         { name: "CAPEX (Σ)", data: capexSeries },
                     ],
-                    xaxis: { categories: scenarioNames, title: { text: "Senaryo" } },
+                    xaxis: { categories: scenarioNames, title: { text: "Scenarios" } },
                     yaxis: {
                         title: { text: "Total Cost (TCO)" },
                         labels: { formatter: val => formatKM(val) }
@@ -929,69 +929,42 @@ async function drawScenarioCharts() {
         // ---------- ROI BOX PLOT ----------
         if (canvases.roiBox) {
             try {
+                const MIN_LIMIT = -1000;
+
                 const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_"));
-                if (!fields.length) {
-                    console.warn("ROI field bulunamadı.");
-                    return;
-                }
+                if (!fields.length) return console.warn("ROI field bulunamadı.");
 
                 const features = await fetchValues(fields);
-                if (!features.length) {
-                    console.warn("ROI verisi bulunamadı.");
-                    return;
-                }
+                if (!features.length) return console.warn("ROI verisi bulunamadı.");
 
                 const seriesData = fields.map(f => {
-
                     const rawVals = features
                         .map(feat => feat.attributes[f.name])
                         .filter(v => v != null);
 
-                    if (!rawVals.length) return null;
-
-                    const scenarioName = (f.alias || f.name).replace(/^ROI[_ ]?/, "");
-
-                    let values = rawVals
-                        .map(v => Number(String(v).replace(",", ".")))
-                        .filter(v => !isNaN(v));
-
-                    // 🔹 SADECE BASE_HP için ABS
-                    if (scenarioName.toUpperCase() === "BASE_HP") {
-                        values = values.map(v => Math.abs(v));
-                    }
-
-                    values.sort((a, b) => a - b);
+                    const values = rawVals
+                        .map(v => parseFloat(String(v).replace(",", ".")))
+                        .filter(v => !isNaN(v))
+                        .sort((a, b) => a - b);
 
                     if (!values.length) return null;
 
-                    const min = values[0];
+                    const realMin = values[0];
+                    const min = Math.max(realMin, MIN_LIMIT); // 🔴 CLAMP
                     const q1 = values[Math.floor(values.length * 0.25)];
                     const median = values[Math.floor(values.length * 0.5)];
                     const q3 = values[Math.floor(values.length * 0.75)];
                     const max = values[values.length - 1];
 
-                    let maskedMin = min;
-
-                    if (scenarioName.toUpperCase() === "BASE_HP") {
-                        const iqr = q3 - q1;
-                        const lowerFence = q1 - 1.5 * iqr;
-
-                        maskedMin = Math.max(min, lowerFence);
-                    }
-
                     return {
-                        x: scenarioName,
-                        y: [maskedMin, q1, median, q3, max],
-                        __realMin: min // tooltip’te istersek gösteririz
+                        x: (f.alias || f.name).replace(/^ROI[_ ]?/, ""),
+                        y: [min, q1, median, q3, max],
+                        _realMin: realMin // tooltip için saklı
                     };
-
-
                 }).filter(Boolean);
 
-                if (!seriesData.length) {
-                    console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
-                    return;
-                }
+                if (!seriesData.length)
+                    return console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
 
                 new ApexCharts(canvases.roiBox, {
                     chart: {
@@ -1011,20 +984,15 @@ async function drawScenarioCharts() {
                         custom: function ({ seriesIndex, dataPointIndex, w }) {
                             const data = w.config.series[seriesIndex].data[dataPointIndex];
                             const y = data.y;
-                            const name = data.x;
 
-                            return `
-                        <div style="padding:6px">
-                            <strong>${name}</strong><br/>
-                            Min: ${y[0].toFixed(2)}%<br/>
-                            Q1: ${y[1].toFixed(2)}%<br/>
-                            Medyan: ${y[2].toFixed(2)}%<br/>
-                            Q3: ${y[3].toFixed(2)}%<br/>
-                            Max: ${y[4].toFixed(2)}%
-                            ${name.toUpperCase() === "BASE_HP"
-                                    ? "<br/><em style='font-size:11px'>(ABS uygulanmıştır)</em>"
-                                    : ""}
-                        </div>`;
+                            return `<div style="padding:6px">
+                        <strong>${data.x}</strong><br/>
+                        Max: ${y[4].toFixed(2)}%<br/>
+                        Q3: ${y[3].toFixed(2)}%<br/>
+                        Medyan: ${y[2].toFixed(2)}%<br/>
+                        Q1: ${y[1].toFixed(2)}%<br/>
+                        Min: ${data._realMin.toFixed(2)}%
+                    </div>`;
                         }
                     },
                     yaxis: {
@@ -1034,15 +1002,12 @@ async function drawScenarioCharts() {
                         }
                     },
                     xaxis: {
-                        title: { text: 'Senaryolar' }
+                        title: { text: 'Scenarios' }
                     },
                     title: {
-                        text: 'Return On Investment (ROI)',
+                        text: 'Return on Investment (ROI) Distribution',
                         align: 'center',
-                        style: {
-                            fontSize: '16px',
-                            fontWeight: 'bold'
-                        }
+                        style: { fontSize: '16px', fontWeight: 'bold' }
                     }
                 }).render();
 
@@ -1051,7 +1016,98 @@ async function drawScenarioCharts() {
             }
         }
 
-        // ---------- kWh/m2 STACKED BAR CHART (MEAN - HORIZONTAL) ----------
+        // ---------- NPV BOX PLOT ----------
+        if (canvases.npvBox) {
+            try {
+                const MIN_LIMIT = -1_000_000; // 🔴 NPV için clamp
+
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_"));
+                if (!fields.length) return console.warn("NPV field bulunamadı.");
+
+                const features = await fetchValues(fields);
+                if (!features.length) return console.warn("NPV verisi bulunamadı.");
+
+                const seriesData = fields.map(f => {
+                    const rawVals = features
+                        .map(feat => feat.attributes[f.name])
+                        .filter(v => v != null);
+
+                    const values = rawVals
+                        .map(v => parseFloat(String(v).replace(",", ".")))
+                        .filter(v => !isNaN(v))
+                        .sort((a, b) => a - b);
+
+                    if (!values.length) return null;
+
+                    const realMin = values[0];
+                    const min = Math.max(realMin, MIN_LIMIT); // 🔴 CLAMP
+                    const q1 = values[Math.floor(values.length * 0.25)];
+                    const median = values[Math.floor(values.length * 0.5)];
+                    const q3 = values[Math.floor(values.length * 0.75)];
+                    const max = values[values.length - 1];
+
+                    return {
+                        x: (f.alias || f.name).replace(/^NPV[_ ]?/, ""), // 🔴 NPV_ ATILDI
+                        y: [min, q1, median, q3, max],
+                        _realMin: realMin // tooltip için sakla
+                    };
+                }).filter(Boolean);
+
+                if (!seriesData.length)
+                    return console.warn("Boxplot için geçerli NPV verisi bulunamadı.");
+
+                new ApexCharts(canvases.npvBox, {
+                    chart: {
+                        type: 'boxPlot',
+                        height: 450,
+                        background: '#fff',
+                        toolbar: { show: true }
+                    },
+                    series: [{
+                        name: 'NPV',
+                        data: seriesData
+                    }],
+                    colors: ["#4bc0c0"],
+                    tooltip: {
+                        theme: "dark",
+                        shared: true,
+                        custom: function ({ seriesIndex, dataPointIndex, w }) {
+                            const data = w.config.series[seriesIndex].data[dataPointIndex];
+                            const y = data.y;
+
+                            return `<div style="padding:6px">
+                        <strong>${data.x}</strong><br/>
+                        Min (Clamp): €${y[0].toFixed(2)}<br/>
+                        Gerçek Min: €${data._realMin.toFixed(2)}<br/>
+                        Q1: €${y[1].toFixed(2)}<br/>
+                        Medyan: €${y[2].toFixed(2)}<br/>
+                        Q3: €${y[3].toFixed(2)}<br/>
+                        Max: €${y[4].toFixed(2)}
+                    </div>`;
+                        }
+                    },
+                    yaxis: {
+                        title: { text: 'NPV (€)' },
+                        labels: {
+                            formatter: val => "€" + val.toFixed(2)
+                        }
+                    },
+                    xaxis: {
+                        title: { text: 'Scenarios' }
+                    },
+                    title: {
+                        text: 'Net Present Value (NPV) Distribution',
+                        align: 'center',
+                        style: { fontSize: '16px', fontWeight: 'bold' }
+                    }
+                }).render();
+
+            } catch (err) {
+                logError("NPV Box", err);
+            }
+        }
+
+        // ---------- kWh/m2 Qheating ----------
         if (canvases.kwhBox) {
             try {
                 const yearDropdown = document.getElementById("yearDropdown");
@@ -1154,7 +1210,7 @@ async function drawScenarioCharts() {
                         }
                     },
                     xaxis: {
-                        title: { text: "kWh/m²" },
+                        title: { text: "Enerji (kWh/m²)" },
                         labels: {
                             formatter: v => v.toFixed(2)
                         }
@@ -1184,7 +1240,123 @@ async function drawScenarioCharts() {
                         horizontalAlign: "left"
                     },
                     title: {
-                        text: `Senaryolara Göre Ortalama Isıtma + İç Yükler (kWh/m²) – ${year}`,
+                        text: `Heating, Equipment and Lighting Loads – ${year}`,
+                        align: "center",
+                        style: {
+                            fontSize: "16px",
+                            fontWeight: "bold"
+                        }
+                    }
+                });
+                canvases.kwhBox._chart.render();
+
+            } catch (err) {
+                logError("kWh/m² Chart", err);
+            }
+        }
+
+        // ---------- SLOPE CHART ----------
+        if (canvases.slope) {
+            try {
+                const capexFields = currentLayer.fields.filter(f => f.name.startsWith("CAPEX_"));
+                const emissionFields = currentLayer.fields.filter(f =>
+                    f.name.startsWith("Emission_") && !f.name.includes("_Reduction")
+                );
+                const reductionFields = currentLayer.fields.filter(f => f.name.startsWith("Emission_Reduction_"));
+
+                const allFields = [...capexFields, ...emissionFields, ...reductionFields];
+                if (!allFields.length) return console.warn("Slope için field bulunamadı.");
+
+                const attrs = await fetchStats(allFields, "sum");
+
+                const scenarioNames = [
+                    "BASE_PV",
+                    "BASE_HP",
+                    "BASE_HP_PV",
+                    "Enve",
+                    "Enve_PV",
+                    "Enve_HP",
+                    "Enve_HP_PV"
+                ];
+
+                const scenarioColors = {
+                    BASE_PV: "#1f77b4",      // mavi
+                    BASE_HP: "#ff7f0e",      // turuncu
+                    BASE_HP_PV: "#2ca02c",   // yeşil
+                    Enve: "#d62728",         // kırmızı
+                    Enve_PV: "#9467bd",      // mor
+                    Enve_HP: "#17becf",      // turkuaz
+                    Enve_HP_PV: "#bcbd22"    // sarı-yeşil
+                };
+
+                const getSumValue = (prefix, scenario) => {
+                    const key = Object.keys(attrs).find(
+                        k => k.startsWith(prefix) && k.includes(scenario) && k.endsWith("_sum")
+                    );
+                    if (!key) return 0;
+                    const raw = attrs[key];
+                    return typeof raw === "number"
+                        ? parseFloat(raw.toFixed(2))
+                        : parseFloat(Number(raw || 0).toFixed(2));
+                };
+
+                const seriesData = scenarioNames.map(name => ({
+                    name,
+                    color: scenarioColors[name], // 🔴 KRİTİK KISIM
+                    data: [
+                        { x: "Capex", y: getSumValue("CAPEX_", name) },
+                        { x: "Total Emission", y: getSumValue("Emission_", name) },
+                        { x: "Emission Reduction", y: getSumValue("Emission_Reduction_", name) }
+                    ]
+                })).filter(s => s.data.some(p => p.y !== 0));
+
+                if (!seriesData.length)
+                    return console.warn("Slope chart için geçerli seri bulunamadı.");
+
+                // Eski chart temizle
+                if (canvases.slope._chart) {
+                    canvases.slope._chart.destroy();
+                }
+
+                canvases.slope._chart = new ApexCharts(canvases.slope, {
+                    chart: {
+                        type: "line",
+                        height: 500,
+                        background: "#fff",
+                        toolbar: { show: false },
+                        zoom: { enabled: false }
+                    },
+                    series: seriesData,
+                    stroke: {
+                        width: 3,
+                        curve: "straight"
+                    },
+                    xaxis: {
+                        categories: ["Capex", "Total Emission", "Emission Reduction"],
+                        title: { text: "Parametreler" },
+                        labels: {
+                            rotate: 0,
+                            style: { fontSize: "13px" }
+                        }
+                    },
+                    yaxis: {
+                        title: { text: "Değerler" },
+                        labels: {
+                            formatter: val => val.toLocaleString()
+                        }
+                    },
+                    tooltip: {
+                        theme: "dark",
+                        shared: true,
+                        intersect: false
+                    },
+                    legend: {
+                        show: true,
+                        position: "top",
+                        horizontalAlign: "center"
+                    },
+                    title: {
+                        text: "Capex, Total Emission, Emission Reduction",
                         align: "center",
                         style: {
                             fontSize: "16px",
@@ -1193,10 +1365,10 @@ async function drawScenarioCharts() {
                     }
                 });
 
-                canvases.kwhBox._chart.render();
+                canvases.slope._chart.render();
 
             } catch (err) {
-                logError("kWh/m² Chart", err);
+                logError("Slope Chart", err);
             }
         }
 
@@ -1297,116 +1469,6 @@ async function drawScenarioCharts() {
                 }).render();
 
             } catch (err) { logError("Radar Chart", err); }
-        }
-
-        // ---------- SLOPE CHART ----------
-        if (canvases.slope) {
-            try {
-                const capexFields = currentLayer.fields.filter(f => f.name.startsWith("CAPEX_"));
-                const emissionFields = currentLayer.fields.filter(f =>
-                    f.name.startsWith("Emission_") && !f.name.includes("_Reduction")
-                );
-                const reductionFields = currentLayer.fields.filter(f => f.name.startsWith("Emission_Reduction_"));
-                const allFields = [...capexFields, ...emissionFields, ...reductionFields];
-
-                if (!allFields.length) return console.warn("Slope için field bulunamadı.");
-
-                const attrs = await fetchStats(allFields, "sum");
-
-                const scenarioNames = ["BASE_PV", "BASE_HP", "BASE_HP_PV", "Enve", "Enve_PV", "Enve_HP", "Enve_HP_PV"];
-
-                const getMeanValue = (prefix, scenario) => {
-                    const key = Object.keys(attrs).find(k => k.startsWith(prefix) && k.includes(scenario) && k.endsWith("_sum"));
-                    if (!key) return 0;
-                    const raw = attrs[key];
-                    // Orijinalde parseFloat(meanVal.toFixed(2)) kullanıldı — bunu koruyoruz
-                    return (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : parseFloat(Number(raw || 0).toFixed(2));
-                };
-
-                const seriesData = scenarioNames.map(name => ({
-                    name,
-                    data: [
-                        { x: "Capex", y: getMeanValue("CAPEX_", name) },
-                        { x: "Total Emission", y: getMeanValue("Emission_", name) },
-                        { x: "Emission Reduction", y: getMeanValue("Emission_Reduction_", name) }
-                    ]
-                })).filter(s => s.data.some(p => p.y !== 0));
-
-                if (!seriesData.length) return console.warn("Slope chart için geçerli seri bulunamadı.");
-
-                new ApexCharts(canvases.slope, {
-                    chart: { type: 'line', height: 500, background: '#fff', toolbar: { show: false }, zoom: { enabled: false } },
-                    series: seriesData,
-                    colors: ["#007bff", "#28a745", "#ffc107", "#dc3545", "#6f42c1", "#20c997", "#6610f2", "#8bc34a"],
-                    stroke: { width: 3, curve: 'straight' },
-                    xaxis: {
-                        categories: ["Capex", "Total Emission", "Emission Reduction"],
-                        title: { text: "Parametreler" },
-                        labels: { rotate: 0, style: { fontSize: '13px' } }
-                    },
-                    yaxis: { title: { text: "Değerler" }, labels: { formatter: val => val.toLocaleString() } },
-                    tooltip: { theme: "dark", shared: true, intersect: false }, // ORIJINAL: theme dark
-                    title: { text: "Capex → Total Emission → Emission Reduction (Slope Chart - Mean)", align: "center", style: { fontSize: "16px", fontWeight: "bold" } },
-                    legend: { show: true, position: "top", horizontalAlign: "center" }
-                }).render();
-
-            } catch (err) { logError("Slope Chart", err); }
-        }
-
-        // ---------- NPV BOX PLOT ----------
-        if (canvases.npvBox) {
-            try {
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_"));
-                if (!fields.length) return console.warn("NPV field bulunamadı.");
-
-                const features = await fetchValues(fields);
-                if (!features.length) return console.warn("NPV verisi bulunamadı.");
-
-                const seriesData = fields.map(f => {
-                    const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
-                    const values = rawVals.map(v => parseFloat(String(v).replace(",", "."))).filter(v => !isNaN(v)).sort((a, b) => a - b);
-                    if (!values.length) return null;
-                    const min = values[0];
-                    const q1 = values[Math.floor(values.length * 0.25)];
-                    const median = values[Math.floor(values.length * 0.5)];
-                    const q3 = values[Math.floor(values.length * 0.75)];
-                    const max = values[values.length - 1];
-                    // orijinalde toFixed(2) gösterim tooltip'lerde kullanılıyordu; boxplot'un y dizisi raw sayılar olabilir fakat tooltip'te toFixed(2) uygulayacağız
-                    return { x: (f.alias || f.name).replace(/^NPV_/, ""), y: [min, q1, median, q3, max] };
-                }).filter(Boolean);
-
-                if (!seriesData.length) return console.warn("Boxplot için geçerli NPV verisi bulunamadı.");
-
-                new ApexCharts(canvases.npvBox, {
-                    chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
-                    series: [{ name: 'NPV', data: seriesData }],
-                    colors: ["#4bc0c0"],
-                    tooltip: {
-                        theme: "dark", // ORIJINAL: theme dark
-                        shared: true,
-                        custom: function ({ seriesIndex, dataPointIndex, w }) {
-                            const y = w.config.series[seriesIndex].data[dataPointIndex].y;
-                            const name = w.config.series[seriesIndex].data[dataPointIndex].x;
-                            // burada toFixed(2) korunuyor
-                            return `<div style="padding:5px">
-                                <strong>${name}</strong><br/>
-                                Min: €${y[0].toFixed(2)}<br/>
-                                Q1: €${y[1].toFixed(2)}<br/>
-                                Medyan: €${y[2].toFixed(2)}<br/>
-                                Q3: €${y[3].toFixed(2)}<br/>
-                                Max: €${y[4].toFixed(2)}
-                            </div>`;
-                        }
-                    },
-                    yaxis: {
-                        title: { text: 'NPV (€)' },
-                        labels: { formatter: val => "€" + val.toFixed(2) } // ORIJINAL: toFixed(2) korunuyor
-                    },
-                    xaxis: { title: { text: 'Senaryolar' } },
-                    title: { text: 'Senaryo Bazlı NPV Boxplot', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
-                }).render();
-
-            } catch (err) { logError("NPV Box", err); }
         }
 
     } catch (globalErr) {
