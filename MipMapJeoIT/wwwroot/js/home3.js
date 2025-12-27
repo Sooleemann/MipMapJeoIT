@@ -780,6 +780,12 @@ if (yearDropdown) {
 const btnScenario = document.getElementById("btnScenario");
 const scenarioContainer = document.getElementById("scenarioContainer");
 
+document.getElementById("btnInfo").addEventListener("click", function () {
+    // PDF dosya yolunu buraya koy
+    const pdfUrl = "/pdf.pdf";
+    window.open(pdfUrl, "_blank");
+});
+
 function forceViewResize() {
 
     const v = window.view || window.sceneView || window.mapView;

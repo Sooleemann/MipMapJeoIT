@@ -143,6 +143,11 @@
                             <i class="fas fa-table text-light"></i>
                         </button>
                     </li>
+                    <li class="nav-item pe-lg-1">
+                        <button type="button" id="btnInfo" class="btn btn-outline-tanap" title="Info">
+                            <i class="fas fa-info text-light"></i>
+                        </button>
+                    </li>
                     <li class="nav-item  pe-lg-1">
                         <button type="button" id="btnFiltre" data-widget="filtre" class="btn btn-outline-tanap" data-button="toolbar" data-bs-target="#drawerFilter" data-bs-toggle="offcanvas" title="Filtre Uygula">
                             <i class="far fa-filter text-light"></i>
@@ -384,140 +389,6 @@
         <div class="d-flex" style="flex: 1; min-height: 0;">
      
             <div id="scenarioContainer" class="mb-5" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;">
-@*                 <div class="container py-4 mt-5 mb-1">
-                    <div class="row g-3">
-                        <!-- Scenario 1 -->
-                        <div class="col-md-3">
-                            <div class="card text-white bg-danger">
-                                <div class="card-body">
-                                    <h5 class="card-title">Scenario 1: 2025_Base_Qheating</h5>
-                                    <!-- Base / Enve with HP/PV -->
-                                    <div class="mt-2">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="scenario1BaseEnve" id="baseOption1" checked>
-                                            <label for="baseOption1" class="mb-0 ms-1 me-3">Base</label>
-
-                                            <!-- HP / PV only for Base -->
-                                            <div class="d-flex align-items-center">
-                                                <input type="checkbox" id="hpOption1">
-                                                <label for="hpOption1" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" id="pvOption1">
-                                                <label for="pvOption1" class="mb-0 ms-1">PV</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- Enve + Button sağda -->
-                                        <div class="d-flex justify-content-between align-items-center mt-1">
-                                            <div>
-                                                <input type="radio" name="scenario1BaseEnve" id="enveOption1">
-                                                <label for="enveOption1" class="mb-0">Enve</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Scenario 2 -->
-                        <div class="col-md-3">
-                            <div class="card text-white bg-primary">
-                                <div class="card-body">
-                                    <h5 class="card-title">Scenario 2: Scenario2FieldName</h5>
-
-                                    <!-- Base / Enve with HP/PV -->
-                                    <div class="mt-2">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="scenario2BaseEnve" id="baseOption2" checked>
-                                            <label for="baseOption2" class="mb-0 ms-1 me-3">Base</label>
-
-                                            <div class="d-flex align-items-center">
-                                                <input type="checkbox" checked id="hpOption2">
-                                                <label for="hpOption2" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" id="pvOption2">
-                                                <label for="pvOption2" class="mb-0 ms-1">PV</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- Enve + Button sağda -->
-                                        <div class="d-flex justify-content-between align-items-center mt-1">
-                                            <div>
-                                                <input type="radio" name="scenario2BaseEnve" id="enveOption2">
-                                                <label for="enveOption2" class="mb-0">Enve</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Scenario 3 -->
-                        <div class="col-md-3">
-                            <div class="card text-white bg-success">
-                                <div class="card-body">
-                                    <h5 class="card-title">Scenario 3: Scenario3FieldName</h5>
-                                    <!-- Base / Enve with HP/PV -->
-                                    <div class="mt-2">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="scenario3BaseEnve" id="baseOption3" checked>
-                                            <label for="baseOption3" class="mb-0 ms-1 me-3">Base</label>
-
-                                            <div class="d-flex align-items-center">
-                                                <input type="checkbox" id="hpOption3">
-                                                <label for="hpOption3" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" checked id="pvOption3">
-                                                <label for="pvOption3" class="mb-0 ms-1">PV</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- Enve + Button sağda -->
-                                        <div class="d-flex justify-content-between align-items-center mt-1">
-                                            <div>
-                                                <input type="radio" name="scenario3BaseEnve" id="enveOption3">
-                                                <label for="enveOption3" class="mb-0">Enve</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Scenario 4 -->
-                        <div class="col-md-3">
-                            <div class="card text-dark bg-warning">
-                                <div class="card-body">
-                                    <h5 class="card-title">Scenario 4: Scenario4FieldName</h5>
-                                    <!-- Base / Enve with HP/PV -->
-                                    <div class="mt-2">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="scenario4BaseEnve" id="baseOption4" checked>
-                                            <label for="baseOption4" class="mb-0 ms-1 me-3">Base</label>
-
-                                            <div class="d-flex align-items-center">
-                                                <input type="checkbox" checked id="hpOption4">
-                                                <label for="hpOption4" class="mb-0 ms-1 me-2">HP</label>
-                                                <input type="checkbox" checked id="pvOption4">
-                                                <label for="pvOption4" class="mb-0 ms-1">PV</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- Enve + Button sağda -->
-                                        <div class="d-flex justify-content-between align-items-center mt-1">
-                                            <div>
-                                                <input type="radio" name="scenario4BaseEnve" id="enveOption4">
-                                                <label for="enveOption4" class="mb-0">Enve</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 text-center">
-                            <button id="btnCreateScenarios" class="btn btn-primary btn-lg">Create All Scenarios</button>
-                        </div>
-                    </div>
-                </div> *@
-
                 <div class="container py-4 mt-5">
                     <div class="row">
                         <!-- Capex Opex -->
