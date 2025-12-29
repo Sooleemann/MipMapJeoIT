@@ -296,15 +296,15 @@ sketch.on("update", (event) => {
 });
 
 // Çizim silindiğinde
-sketch.on("delete", (event) => {
-    sketchGeometry = null;
-    selectedObjectIds = [];
-    if (highlightHandle) {
-        highlightHandle.remove();
-        highlightHandle = null;
-    }
-    // highlightBuildings() çağırmayacağız
-});
+//sketch.on("delete", (event) => {
+//    sketchGeometry = null;
+//    selectedObjectIds = [];
+//    if (highlightHandle) {
+//        highlightHandle.remove();
+//        highlightHandle = null;
+//    }
+//    // highlightBuildings() çağırmayacağız
+//});
 
 function highlightBuildings() {
     if (!currentLayer || !sketchGeometry) return;
@@ -315,17 +315,55 @@ function highlightBuildings() {
         query.spatialRelationship = "intersects";
 
         sceneLayerView.queryObjectIds(query).then((objectIds) => {
-
             selectedObjectIds = objectIds || [];
 
+            // Highlight
             if (highlightHandle) highlightHandle.remove();
-
             if (selectedObjectIds.length > 0) {
                 highlightHandle = sceneLayerView.highlight(selectedObjectIds);
+            }
+
+            // FeatureLayer filtreleme
+            if (selectedObjectIds.length > 0) {
+                currentLayer.definitionExpression = `OBJECTID IN (${selectedObjectIds.join(",")})`;
+            } else {
+                currentLayer.definitionExpression = null; // tümünü göster
             }
         });
     });
 }
+
+// Çizim silindiğinde
+sketch.on("delete", () => {
+    sketchGeometry = null;
+    selectedObjectIds = [];
+    if (highlightHandle) {
+        highlightHandle.remove();
+        highlightHandle = null;
+    }
+    currentLayer.definitionExpression = null; // tüm feature'ları göster
+});
+
+//function highlightBuildings() {
+//    if (!currentLayer || !sketchGeometry) return;
+
+//    view.whenLayerView(currentLayer).then((sceneLayerView) => {
+//        const query = sceneLayerView.createQuery();
+//        query.geometry = sketchGeometry;
+//        query.spatialRelationship = "intersects";
+
+//        sceneLayerView.queryObjectIds(query).then((objectIds) => {
+
+//            selectedObjectIds = objectIds || [];
+
+//            if (highlightHandle) highlightHandle.remove();
+
+//            if (selectedObjectIds.length > 0) {
+//                highlightHandle = sceneLayerView.highlight(selectedObjectIds);
+//            }
+//        });
+//    });
+//}
 
 async function filterScene() {
     clearHighlighting();
