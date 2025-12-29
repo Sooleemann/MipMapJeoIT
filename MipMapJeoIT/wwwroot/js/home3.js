@@ -295,17 +295,6 @@ sketch.on("update", (event) => {
     }
 });
 
-// Çizim silindiğinde
-//sketch.on("delete", (event) => {
-//    sketchGeometry = null;
-//    selectedObjectIds = [];
-//    if (highlightHandle) {
-//        highlightHandle.remove();
-//        highlightHandle = null;
-//    }
-//    // highlightBuildings() çağırmayacağız
-//});
-
 function highlightBuildings() {
     if (!currentLayer || !sketchGeometry) return;
 
@@ -343,27 +332,6 @@ sketch.on("delete", () => {
     }
     currentLayer.definitionExpression = null; // tüm feature'ları göster
 });
-
-//function highlightBuildings() {
-//    if (!currentLayer || !sketchGeometry) return;
-
-//    view.whenLayerView(currentLayer).then((sceneLayerView) => {
-//        const query = sceneLayerView.createQuery();
-//        query.geometry = sketchGeometry;
-//        query.spatialRelationship = "intersects";
-
-//        sceneLayerView.queryObjectIds(query).then((objectIds) => {
-
-//            selectedObjectIds = objectIds || [];
-
-//            if (highlightHandle) highlightHandle.remove();
-
-//            if (selectedObjectIds.length > 0) {
-//                highlightHandle = sceneLayerView.highlight(selectedObjectIds);
-//            }
-//        });
-//    });
-//}
 
 async function filterScene() {
     clearHighlighting();
