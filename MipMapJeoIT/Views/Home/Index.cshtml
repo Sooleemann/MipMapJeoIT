@@ -33,9 +33,7 @@
             min-width: 0;
         }
           
-            #scenarioContainer.open {
-                width: 900px !important;
-            }
+           
         body {
             padding: 0;
             margin: 0;
@@ -66,6 +64,49 @@
         #drawerFilter {
             top: 20px;
         }
+
+        /* PANEL */
+        #scenarioContainer.scenario-panel {
+            width: 420px; /* default açılış */
+            min-width: 420px; /* ilk ekran boyuyla oynamayalım */
+            max-width: 900px;
+            flex-shrink: 0; /* 🔥 panel daralmasın, harita daralsın */
+            position: relative;
+            overflow: auto;
+            background: #f8f9fa;
+        }
+
+            /* KAPALI */
+            #scenarioContainer.scenario-panel:not(.open) {
+                width: 0;
+                min-width: 0;
+                overflow: hidden;
+            }
+
+        /* İÇERİK panelle birlikte büyüsün */
+        #scenarioContainer .scenario-content {
+            width: 100%;
+            max-width: none !important;
+        }
+
+        /* RESIZER */
+        #scenarioResizer.scenario-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 12px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 1000;
+            background: transparent;
+        }
+
+        body.scenario-resizing {
+            user-select: none;
+            cursor: col-resize;
+        }
+
+
 
     </style>
 </head>
@@ -387,61 +428,57 @@
 
     <div class="d-flex flex-column" style="height: 100vh;">
         <div class="d-flex" style="flex: 1; min-height: 0;">
-     
-            <div id="scenarioContainer" class="mb-5" style="width: 0; transition: width 0.3s; overflow-y: auto; background: #f8f9fa;">
-                <div class="container py-4 mt-5">
+
+            <div id="scenarioContainer" class="scenario-panel">
+                <div class="scenario-content  py-4 mt-5">
+                    <div class="container-fluid">
                     <div class="row">
                         <!-- Capex Opex -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="capexopexChart"></div>
                             </div>
                         </div>
 
-                        <!--Roi Boxplot Chart -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="roiboxPlotChart"></div>
                             </div>
                         </div>
 
-                        <!--NPV Boxplot Chart -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="npvboxPlotChart"></div>
                             </div>
                         </div>
 
-                        <!--NPV Boxplot Chart -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="kwhChart"></div>
                             </div>
                         </div>
 
-                        <!-- slope chart hepsi birleşik -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="slopeChart"></div>
                             </div>
                         </div>
 
-                        <!-- Radial Bar Chart -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="radialBarChart"></div>
                             </div>
                         </div>
 
-                        <!-- Radar Chart -->
-                        <div class="col-md-12 mb-4">
+                        <div class="col-12 mb-4">
                             <div class="border rounded p-2">
                                 <div id="radarChart"></div>
                             </div>
                         </div>
                     </div>
-
                 </div>
+                </div>
+                <div id="scenarioResizer" class="scenario-resizer" title="Resize"></div>
             </div>
             <div id="mapContainer" style="flex: 1; min-height: 0; min-width: 0;"></div> <!-- <= buraya da -->
         </div>
