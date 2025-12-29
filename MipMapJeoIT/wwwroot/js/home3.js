@@ -6,7 +6,7 @@
     DirectLineMeasurement3D, AreaMeasurement3D, ElevationProfile, Daylight, Weather, webMercatorUtils,
     Bookmarks, Bookmark, Point, TileLayer, ElevationLayer, GroupLayer, Editor, Polygon, LabelClass,
     config, WebTileLayer, ClassBreaksRenderer, LineOfSight, IntegratedMesh3DTilesLayer, SpatialReference,
-    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer, FeatureTable, Legend
+    project, ViewshedAnalysis, Viewshed, OrientedImageryLayer, FeatureTable, Legend, Sketch
 ] = await $arcgis.import([
     "@arcgis/core/Map.js",
     "@arcgis/core/layers/SceneLayer.js",
@@ -65,7 +65,7 @@
     "@arcgis/core/analysis/Viewshed.js",
     "@arcgis/core/layers/OrientedImageryLayer.js",
     "@arcgis/core/widgets/FeatureTable.js",
-    "@arcgis/core/widgets/Legend"
+    "@arcgis/core/widgets/Legend", "esri/widgets/Sketch",
 ]);
 
 let homeCamera;
@@ -74,12 +74,15 @@ let sceneLayerView;
 let sceneLayerViews = {};
 let sceneLayer;
 let highlightHandles = [];
+let highlightHandle = null;
 let sliderDefaults = {};
 let featureTable;
 let activeLayerView;
 let activeLayer;
 let highlight;
 let currentLayer;
+let sketchGeometry = null;
+let selectedObjectIds = [];
 
 let ODTUScene = new WebScene({
     portalItem: { id: "3adfc71e9e2a41cba7607b88046d6ecc" }
@@ -115,8 +118,33 @@ const legendExpand = new Expand({
     expanded: false,
     group: "top-left-tools"
 });
-
 view.ui.add(legendExpand, "top-left");
+
+const sketchLayer = new GraphicsLayer();
+view.map.add(sketchLayer);
+
+// 2️⃣ Sketch widget
+const sketch = new Sketch({
+    view: view,
+    layer: sketchLayer,
+    creationMode: "update",
+    availableCreateTools: ["polygon"], // sadece polygon aracı
+    visibleElements: {
+        selectionTools: false,
+        settingsMenu: false
+    }
+});
+
+
+const sketchExpand = new Expand({
+    view: view,
+    content: sketch,
+    expanded: false,
+    group: "top-left-tools"
+});
+
+// 4️⃣ UI’ya ekle
+view.ui.add(sketchExpand, "top-left");
 
 
 view.when(() => {
@@ -158,7 +186,146 @@ view.when(() => {
             // fallback: eğer watch yoksa başka event ekle (ör. LayerList kullanıyorsan onun event'ine bağla)
         }
     });
+
+    ///SKETCH WIDGET İLE POLYGON ÇİZİMİ VE SEÇİM///
+
+
+
+    //const sketchLayer = new GraphicsLayer();
+    //view.map.add(sketchLayer);
+
+    //let sketchViewModel = new SketchViewModel({
+    //    layer: sketchLayer,
+    //    view: view,
+    //    defaultCreateOptions: { hasZ: false },
+    //    defaultUpdateOptions: { tool: "reshape", toggleToolOnClick: false }
+    //});
+
+    //// CurrentLayer değişirse sceneLayerView güncelle
+    //function updateSceneLayerView() {
+    //    if (currentLayer) {
+    //        view.whenLayerView(currentLayer).then(lv => {
+    //            sceneLayerView = lv;
+    //        });
+    //    }
+    //}
+
+    //updateSceneLayerView(); // Başlangıç için
+
+    //// Eğer layer görünürlüğü değişirse, yeni currentLayer için layerView al
+    //groupLayer.layers.forEach(layer => {
+    //    if (typeof layer.watch === "function") {
+    //        layer.watch("visible", (newVal) => {
+    //            if (newVal) {
+    //                currentLayer = layer;
+    //                updateSlidersForLayer(groupLayer, currentLayer);
+    //                updateSceneLayerView();
+    //            }
+    //        });
+    //    }
+    //});
+
+    //// Polygon çizimi tamamlandığında query ve highlight
+    //sketchViewModel.on("create", event => {
+    //    if (event.state === "complete") {
+    //        sketchGeometry = event.graphic.geometry;
+
+    //        if (!sceneLayerView || !sceneLayerView.queryObjectIds) return;
+
+    //        const query = sceneLayerView.createQuery();
+    //        query.geometry = sketchGeometry;
+    //        query.spatialRelationship = "intersects";
+
+    //        sceneLayerView.queryObjectIds(query).then(objectIds => {
+    //            if (highlightHandle) highlightHandle.remove();
+    //            highlightHandle = sceneLayerView.highlight(objectIds);
+    //            console.log("Seçilen objeler:", objectIds.length);
+    //        });
+    //    }
+    //});
+
+    //// --- Harita UI butonları ---
+    //const polygonWidget = document.createElement("div");
+    //polygonWidget.className = "esri-widget esri-widget-button esri-interactive esri-icon-polygon-vertices";
+    //polygonWidget.title = "Alan seçmek için polygon çiz";
+
+    //// Buton boyutunu ArcGIS widgetlarla aynı yapmak için
+    //polygonWidget.style.width = "36px";
+    //polygonWidget.style.height = "36px";
+    //polygonWidget.style.display = "flex";
+    //polygonWidget.style.alignItems = "center";
+    //polygonWidget.style.justifyContent = "center";
+
+    //polygonWidget.addEventListener("click", () => {
+    //    sketchGeometry = null;
+    //    sketchViewModel.cancel();
+    //    sketchLayer.removeAll();
+    //    if (highlightHandle) highlightHandle.remove();
+    //    sketchViewModel.create("polygon");
+    //});
+
+    //view.ui.add(polygonWidget, "top-left");
+
+
+    //const clearButton = document.createElement("button");
+    //clearButton.innerHTML = "Temizle";
+    //clearButton.className = "esri-widget-button esri-widget esri-interactive";
+    //clearButton.title = "Seçimi temizle";
+    //clearButton.addEventListener("click", () => {
+    //    sketchGeometry = null;
+    //    sketchViewModel.cancel();
+    //    sketchLayer.removeAll();
+    //    if (highlightHandle) highlightHandle.remove();
+    //});
+    //view.ui.add(clearButton, "top-left");
 });
+
+sketch.on("create", (event) => {
+    if (event.state === "complete") {
+        sketchGeometry = event.graphic.geometry;
+        highlightBuildings();
+    }
+});
+
+// Çizim güncellendiğinde
+sketch.on("update", (event) => {
+    if (event.state === "complete" && event.graphics.length > 0) {
+        sketchGeometry = event.graphics[0].geometry;
+       // highlightBuildings();
+    }
+});
+
+// Çizim silindiğinde
+sketch.on("delete", (event) => {
+    sketchGeometry = null;
+    selectedObjectIds = [];
+    if (highlightHandle) {
+        highlightHandle.remove();
+        highlightHandle = null;
+    }
+    // highlightBuildings() çağırmayacağız
+});
+
+function highlightBuildings() {
+    if (!currentLayer || !sketchGeometry) return;
+
+    view.whenLayerView(currentLayer).then((sceneLayerView) => {
+        const query = sceneLayerView.createQuery();
+        query.geometry = sketchGeometry;
+        query.spatialRelationship = "intersects";
+
+        sceneLayerView.queryObjectIds(query).then((objectIds) => {
+
+            selectedObjectIds = objectIds || [];
+
+            if (highlightHandle) highlightHandle.remove();
+
+            if (selectedObjectIds.length > 0) {
+                highlightHandle = sceneLayerView.highlight(selectedObjectIds);
+            }
+        });
+    });
+}
 
 async function filterScene() {
     clearHighlighting();
