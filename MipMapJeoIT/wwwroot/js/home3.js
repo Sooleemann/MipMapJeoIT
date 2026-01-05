@@ -121,7 +121,7 @@ const legendExpand = new Expand({
 view.ui.add(legendExpand, "top-left");
 
 const sketchLayer = new GraphicsLayer();
-view.map.add(sketchLayer);
+//view.map.add(sketchLayer);
 
 // 2️⃣ Sketch widget
 const sketch = new Sketch({
