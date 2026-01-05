@@ -1501,7 +1501,7 @@ async function drawScenarioCharts() {
                     console.warn("Payback alanı bulunamadı.");
                 } else {
                     const stats = await fetchStats(fields, "max");
-                    const MAX_PAYBACK = 45;
+                    const MAX_PAYBACK = 25;
 
                     const filteredData = fields.map(f => {
                         let raw = stats[`${f.name}_max`];
