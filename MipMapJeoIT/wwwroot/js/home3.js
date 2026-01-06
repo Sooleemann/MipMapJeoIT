@@ -186,98 +186,6 @@ view.when(() => {
             // fallback: eğer watch yoksa başka event ekle (ör. LayerList kullanıyorsan onun event'ine bağla)
         }
     });
-
-    ///SKETCH WIDGET İLE POLYGON ÇİZİMİ VE SEÇİM///
-
-
-
-    //const sketchLayer = new GraphicsLayer();
-    //view.map.add(sketchLayer);
-
-    //let sketchViewModel = new SketchViewModel({
-    //    layer: sketchLayer,
-    //    view: view,
-    //    defaultCreateOptions: { hasZ: false },
-    //    defaultUpdateOptions: { tool: "reshape", toggleToolOnClick: false }
-    //});
-
-    //// CurrentLayer değişirse sceneLayerView güncelle
-    //function updateSceneLayerView() {
-    //    if (currentLayer) {
-    //        view.whenLayerView(currentLayer).then(lv => {
-    //            sceneLayerView = lv;
-    //        });
-    //    }
-    //}
-
-    //updateSceneLayerView(); // Başlangıç için
-
-    //// Eğer layer görünürlüğü değişirse, yeni currentLayer için layerView al
-    //groupLayer.layers.forEach(layer => {
-    //    if (typeof layer.watch === "function") {
-    //        layer.watch("visible", (newVal) => {
-    //            if (newVal) {
-    //                currentLayer = layer;
-    //                updateSlidersForLayer(groupLayer, currentLayer);
-    //                updateSceneLayerView();
-    //            }
-    //        });
-    //    }
-    //});
-
-    //// Polygon çizimi tamamlandığında query ve highlight
-    //sketchViewModel.on("create", event => {
-    //    if (event.state === "complete") {
-    //        sketchGeometry = event.graphic.geometry;
-
-    //        if (!sceneLayerView || !sceneLayerView.queryObjectIds) return;
-
-    //        const query = sceneLayerView.createQuery();
-    //        query.geometry = sketchGeometry;
-    //        query.spatialRelationship = "intersects";
-
-    //        sceneLayerView.queryObjectIds(query).then(objectIds => {
-    //            if (highlightHandle) highlightHandle.remove();
-    //            highlightHandle = sceneLayerView.highlight(objectIds);
-    //            console.log("Seçilen objeler:", objectIds.length);
-    //        });
-    //    }
-    //});
-
-    //// --- Harita UI butonları ---
-    //const polygonWidget = document.createElement("div");
-    //polygonWidget.className = "esri-widget esri-widget-button esri-interactive esri-icon-polygon-vertices";
-    //polygonWidget.title = "Alan seçmek için polygon çiz";
-
-    //// Buton boyutunu ArcGIS widgetlarla aynı yapmak için
-    //polygonWidget.style.width = "36px";
-    //polygonWidget.style.height = "36px";
-    //polygonWidget.style.display = "flex";
-    //polygonWidget.style.alignItems = "center";
-    //polygonWidget.style.justifyContent = "center";
-
-    //polygonWidget.addEventListener("click", () => {
-    //    sketchGeometry = null;
-    //    sketchViewModel.cancel();
-    //    sketchLayer.removeAll();
-    //    if (highlightHandle) highlightHandle.remove();
-    //    sketchViewModel.create("polygon");
-    //});
-
-    //view.ui.add(polygonWidget, "top-left");
-
-
-    //const clearButton = document.createElement("button");
-    //clearButton.innerHTML = "Temizle";
-    //clearButton.className = "esri-widget-button esri-widget esri-interactive";
-    //clearButton.title = "Seçimi temizle";
-    //clearButton.addEventListener("click", () => {
-    //    sketchGeometry = null;
-    //    sketchViewModel.cancel();
-    //    sketchLayer.removeAll();
-    //    if (highlightHandle) highlightHandle.remove();
-    //});
-    //view.ui.add(clearButton, "top-left");
 });
 
 sketch.on("create", (event) => {
@@ -291,7 +199,7 @@ sketch.on("create", (event) => {
 sketch.on("update", (event) => {
     if (event.state === "complete" && event.graphics.length > 0) {
         sketchGeometry = event.graphics[0].geometry;
-       // highlightBuildings();
+        // highlightBuildings();
     }
 });
 
@@ -359,8 +267,8 @@ async function filterScene() {
     const emission2050 = $("#sliderEmission2050").data("ionRangeSlider").result;
     const basepv2050 = $("#sliderBasePV2050").data("ionRangeSlider").result;
 
-    const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
-    const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
+    //const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
+    //const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
 
     const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
     const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
@@ -391,14 +299,14 @@ async function filterScene() {
     F2050_BASE_PV_Production_PV_ BETWEEN ${basepv2050.from} AND ${basepv2050.to}
 `;
 
-    // --- IOD filtreleri yalnızca değer varsa ekle ---
-    if (iod2025 && iod2025 !== "null") {
-        query.where += ` AND F2025_BASE_IOD = '${iod2025}'`;
-    }
+    //// --- IOD filtreleri yalnızca değer varsa ekle ---
+    //if (iod2025 && iod2025 !== "null") {
+    //    query.where += ` AND F2025_BASE_IOD = '${iod2025}'`;
+    //}
 
-    if (iod2050 && iod2050 !== "null") {
-        query.where += ` AND F2050_BASE_IOD = '${iod2050}'`;
-    }
+    //if (iod2050 && iod2050 !== "null") {
+    //    query.where += ` AND F2050_BASE_IOD = '${iod2050}'`;
+    //}
 
     const result = await activeLayer.queryFeatures(query);
 
@@ -501,33 +409,33 @@ async function initSliders(groupLayer, activeLayer) {
         });
     }
 
-    // IOD değerleri
-    const iodValues2025 = ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"];
-    const iodValues2050 = ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"];
+    //// IOD değerleri
+    //const iodValues2025 = ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"];
+    //const iodValues2050 = ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"];
 
-    const iodSliders = [
-        { id: "#sliderIOD2025", values: iodValues2025, field: "F2025_BASE_IOD" },
-        { id: "#sliderIOD2050", values: iodValues2050, field: "F2050_BASE_IOD" }
-    ];
+    //const iodSliders = [
+    //    { id: "#sliderIOD2025", values: iodValues2025, field: "F2025_BASE_IOD" },
+    //    { id: "#sliderIOD2050", values: iodValues2050, field: "F2050_BASE_IOD" }
+    //];
 
-    iodSliders.forEach(s => {
-        const $el = $(s.id);
-        const inst = $el.data("ionRangeSlider");
-        if (inst) inst.destroy(); // daha sade
+    //iodSliders.forEach(s => {
+    //    const $el = $(s.id);
+    //    const inst = $el.data("ionRangeSlider");
+    //    if (inst) inst.destroy(); // daha sade
 
-        $el.ionRangeSlider({
-            values: s.values,
-            grid: true,
-            onFinish: function (data) {
-                const selected = data.from_value;
-                filterScene({
-                    field: s.field,
-                    value: selected, // direkt string gönder — parseFloat yok
-                    layerName: (activeLayer && activeLayer.title) || null
-                });
-            }
-        });
-    });
+    //    $el.ionRangeSlider({
+    //        values: s.values,
+    //        grid: true,
+    //        onFinish: function (data) {
+    //            const selected = data.from_value;
+    //            filterScene({
+    //                field: s.field,
+    //                value: selected, // direkt string gönder — parseFloat yok
+    //                layerName: (activeLayer && activeLayer.title) || null
+    //            });
+    //        }
+    //    });
+    //});
 }
 // -------------------------------------------------
 // updateSlidersForLayer: aktif layer değişince çağrılır
@@ -579,38 +487,38 @@ async function updateSlidersForLayer(groupLayer, newActiveLayer) {
         });
     }
 
-    // --- IOD sliders ---
-    const iodSliders = [
-        {
-            id: "#sliderIOD2025",
-            field: "F2025_BASE_IOD",
-            values: ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"]
-        },
-        {
-            id: "#sliderIOD2050",
-            field: "F2050_BASE_IOD",
-            values: ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"]
-        }
-    ];
+    //// --- IOD sliders ---
+    //const iodSliders = [
+    //    {
+    //        id: "#sliderIOD2025",
+    //        field: "F2025_BASE_IOD",
+    //        values: ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"]
+    //    },
+    //    {
+    //        id: "#sliderIOD2050",
+    //        field: "F2050_BASE_IOD",
+    //        values: ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"]
+    //    }
+    //];
 
-    iodSliders.forEach(s => {
-        const $el = $(s.id);
-        const inst = $el.data("ionRangeSlider");
-        if (inst) inst.destroy();
+    //iodSliders.forEach(s => {
+    //    const $el = $(s.id);
+    //    const inst = $el.data("ionRangeSlider");
+    //    if (inst) inst.destroy();
 
-        $el.ionRangeSlider({
-            values: s.values,
-            grid: true,
-            onFinish: function (data) {
-                const selected = data.from_value;
-                filterScene({
-                    field: s.field,
-                    value: selected, // sadece seçilen yıl için filtre uygular
-                    layerName: newActiveLayer.title
-                });
-            }
-        });
-    });
+    //    $el.ionRangeSlider({
+    //        values: s.values,
+    //        grid: true,
+    //        onFinish: function (data) {
+    //            const selected = data.from_value;
+    //            filterScene({
+    //                field: s.field,
+    //                value: selected, // sadece seçilen yıl için filtre uygular
+    //                layerName: newActiveLayer.title
+    //            });
+    //        }
+    //    });
+    //});
 }
 
 // Filtreyi temizle
