@@ -242,9 +242,8 @@ sketch.on("delete", () => {
 });
 
 async function filterScene() {
-    clearHighlighting();
+    //clearHighlighting();
 
-    // --- Sliders ---
     const uwall = $("#uwallSlider").data("ionRangeSlider").result;
     const uwindow = $("#uwindowSlider").data("ionRangeSlider").result;
     const uroof = $("#uroofSlider").data("ionRangeSlider").result;
@@ -270,8 +269,19 @@ async function filterScene() {
     //const iod2025 = $("#sliderIOD2025").data("ionRangeSlider").result.from_value;
     //const iod2050 = $("#sliderIOD2050").data("ionRangeSlider").result.from_value;
 
-    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
-    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
+
+    //const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
+    const groupTitles = ["Envelope Properties", "KPI Parameters"];
+    const targetGroups = ODTUScene.layers.filter(l => groupTitles.includes(l.title));
+
+    // 2. Bu gruplardan hangisi şu an görünür (visible)? Onu bulalım.
+    const activeGroup = targetGroups.find(g => g.visible);
+
+    if (!activeGroup) {
+        console.warn("Lütfen bir katman grubunu (Envelope veya KPI) aktif hale getirin.");
+        return;
+    }
+    const activeLayer = activeGroup.layers.find(l => l.visible && l.type === "feature");
     if (!activeLayer) return;
 
     const query = activeLayer.createQuery();
@@ -298,15 +308,6 @@ async function filterScene() {
     Emission_BASE__kg_CO2_ BETWEEN ${emission2050.from} AND ${emission2050.to} AND
     F2050_BASE_PV_Production_PV_ BETWEEN ${basepv2050.from} AND ${basepv2050.to}
 `;
-
-    //// --- IOD filtreleri yalnızca değer varsa ekle ---
-    //if (iod2025 && iod2025 !== "null") {
-    //    query.where += ` AND F2025_BASE_IOD = '${iod2025}'`;
-    //}
-
-    //if (iod2050 && iod2050 !== "null") {
-    //    query.where += ` AND F2050_BASE_IOD = '${iod2050}'`;
-    //}
 
     const result = await activeLayer.queryFeatures(query);
 
@@ -404,42 +405,10 @@ async function initSliders(groupLayer, activeLayer) {
                     layerName: (activeLayer && activeLayer.title) || null
                 });
             },
-            // ionRangeSlider'ın 'disable' option'ı destekleniyorsa:
             disable: !hasField
         });
     }
-
-    //// IOD değerleri
-    //const iodValues2025 = ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"];
-    //const iodValues2050 = ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"];
-
-    //const iodSliders = [
-    //    { id: "#sliderIOD2025", values: iodValues2025, field: "F2025_BASE_IOD" },
-    //    { id: "#sliderIOD2050", values: iodValues2050, field: "F2050_BASE_IOD" }
-    //];
-
-    //iodSliders.forEach(s => {
-    //    const $el = $(s.id);
-    //    const inst = $el.data("ionRangeSlider");
-    //    if (inst) inst.destroy(); // daha sade
-
-    //    $el.ionRangeSlider({
-    //        values: s.values,
-    //        grid: true,
-    //        onFinish: function (data) {
-    //            const selected = data.from_value;
-    //            filterScene({
-    //                field: s.field,
-    //                value: selected, // direkt string gönder — parseFloat yok
-    //                layerName: (activeLayer && activeLayer.title) || null
-    //            });
-    //        }
-    //    });
-    //});
 }
-// -------------------------------------------------
-// updateSlidersForLayer: aktif layer değişince çağrılır
-// -------------------------------------------------
 async function updateSlidersForLayer(groupLayer, newActiveLayer) {
     // --- Normal sliders ---
     const sliders = [
@@ -487,38 +456,6 @@ async function updateSlidersForLayer(groupLayer, newActiveLayer) {
         });
     }
 
-    //// --- IOD sliders ---
-    //const iodSliders = [
-    //    {
-    //        id: "#sliderIOD2025",
-    //        field: "F2025_BASE_IOD",
-    //        values: ["office_no_iod", "0,41", "0,43", "0,44", "0,45", "0,47", "0,5", "0,51", "0,55", "0,65"]
-    //    },
-    //    {
-    //        id: "#sliderIOD2050",
-    //        field: "F2050_BASE_IOD",
-    //        values: ["office_no_iod", "0,87", "0,89", "0,9", "0,96", "1,06", "1,07", "1,09", "1,12", "1,31"]
-    //    }
-    //];
-
-    //iodSliders.forEach(s => {
-    //    const $el = $(s.id);
-    //    const inst = $el.data("ionRangeSlider");
-    //    if (inst) inst.destroy();
-
-    //    $el.ionRangeSlider({
-    //        values: s.values,
-    //        grid: true,
-    //        onFinish: function (data) {
-    //            const selected = data.from_value;
-    //            filterScene({
-    //                field: s.field,
-    //                value: selected, // sadece seçilen yıl için filtre uygular
-    //                layerName: newActiveLayer.title
-    //            });
-    //        }
-    //    });
-    //});
 }
 
 // Filtreyi temizle
@@ -528,11 +465,20 @@ function clearHighlighting() {
     });
     highlightHandles = [];
 
-    const groupLayer = ODTUScene.layers.find(l => l.title === "Envelope Properties");
-    const activeLayer = groupLayer.layers.find(l => l.visible && l.type === "feature");
-    if (activeLayer) {
-        activeLayer.definitionExpression = null; // bütün veriler geri gelir
-    }
+    const groupTitles = ["Envelope Properties", "KPI Parameters"];
+
+    groupTitles.forEach(title => {
+        const groupLayer = ODTUScene.layers.find(l => l.title === title);
+
+        if (groupLayer) {
+            // Bu grubun içindeki tüm görünür feature katmanlarını bul
+            groupLayer.layers.forEach(layer => {
+                if (layer.visible && layer.type === "feature") {
+                    layer.definitionExpression = null; // Filtreyi kaldır, tüm verileri göster
+                }
+            });
+        }
+    });
 }
 
 function enableFeatureTableRowClick(table) {
@@ -762,21 +708,28 @@ function setActiveWidget(type) {
         case "FeatureTable":
             var div = document.createElement("div");
             div.id = "FtableDiv";
-            div.style.height = "50vh";
+            div.style.height = "30vh";
             div.style.width = "100%";
 
             var conDiv = document.getElementById("tableContainer");
             conDiv.innerHTML = ""; // önceki tabloyu temizle
             conDiv.appendChild(div);
 
-            // Aktif Layer'i bul
-            const groupLayersss = view.map.layers.find(l => l.title === "Envelope Properties");
+            // 1. Her iki grup katmanını kontrol et
+            const groupTitles = ["Envelope Properties", "KPI Parameters"];
+            const targetGroups = view.map.layers.filter(l => groupTitles.includes(l.title));
 
-            // GroupLayer altındaki ilk görünür FeatureLayer’i bul
-            const activeLayer = groupLayersss.layers.find(l => l.visible && l.type === "feature");
+            // 2. Bu gruplardan hangisi şu an görünür (visible)?
+            const activeGroup = targetGroups.find(g => g.visible);
+
+            if (!activeGroup) {
+                alert("Tabloyu açmak için önce bir katman grubunu (Envelope veya KPI) aktif yapın!");
+                break;
+            }
+            const activeLayer = activeGroup.layers.find(l => l.visible && (l.type === "feature" || l.type === "scene"));
 
             if (!activeLayer) {
-                alert("Tablosu açılacak aktif FeatureLayer yok!");
+                alert("Seçili grupta tablosu açılacak aktif bir katman bulunamadı!");
                 break;
             }
 
@@ -794,7 +747,8 @@ function setActiveWidget(type) {
             });
 
             document.getElementById("tableContainer").style.display = "block";
-            document.getElementById("mapContainer").style.height = "50vh";
+            document.getElementById("tableContainer").style.height = "30vh"; 
+            document.getElementById("mapContainer").style.height = "70vh";
 
             setActiveButton(document.getElementById("btnFeatureTable"));
             break;
@@ -1513,3 +1467,8 @@ async function drawScenarioCharts() {
     }
 }
 
+document.getElementById("btnInfo").addEventListener("click", function () {
+    // PDF dosya yolunu buraya koy
+    const pdfUrl = "/pdf.pdf";
+    window.open(pdfUrl, "_blank");
+});
