@@ -1359,54 +1359,100 @@ async function drawScenarioCharts() {
         if (canvases.radial) {
             try {
                 const fields = currentLayer.fields.filter(f => f.name.startsWith("Payback_"));
-                if (!fields.length) {
-                    console.warn("Payback alanı bulunamadı.");
-                } else {
-                    const stats = await fetchStats(fields, "max");
-                    const MAX_PAYBACK = 25;
+                if (!fields.length) return;
 
-                    const filteredData = fields.map(f => {
-                        let raw = stats[`${f.name}_max`];
-                        if (raw === null || raw === undefined) raw = MAX_PAYBACK;
-                        const value = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : MAX_PAYBACK;
-                        return {
-                            label: (f.alias || f.name).replace(/^Payback[_ ]?/, "").replace(/_/g, " ").trim(),
-                            value
-                        };
-                    });
+                const MAX_PAYBACK = 25;
 
-                    const series = filteredData.map(d => d.value);
-                    const labels = filteredData.map(d => d.label);
-                    const maxValue = Math.max(...series).toFixed(2);
+                // SORUN ÇÖZÜMÜ: Her field için ayrı istatistik çekiyoruz (Promise.all)
+                const statsArray = await Promise.all(fields.map(f => fetchStats([f], "max")));
 
-                    renderScenarioChart("radial", canvases.radial, {
-                        chart: { type: 'radialBar', height: 550 },
-                        series,
-                        labels,
-                        colors: ["#36a2eb", "#ff6384", "#ffcd56", "#4bc0c0", "#9966ff", "#ff9f40", "#8a89a6"],
-                        plotOptions: {
-                            radialBar: {
-                                hollow: { size: '35%' },
-                                track: { strokeWidth: '100%' },
-                                dataLabels: {
-                                    name: { show: true, fontSize: '16px' },
-                                    value: { show: true, formatter: val => `${val} yıl` },
-                                    total: { show: true, label: 'Maks.', formatter: () => `${maxValue} yıl` }
-                                }
+                const filteredData = fields.map((f, index) => {
+                    const s = statsArray[index];
+                    // Farklı isimlendirme olasılıklarını kontrol et
+                    let raw = s[`${f.name}_max`] ?? s[`max_${f.name}`] ?? s[f.name] ?? Object.values(s)[0];
+
+                    if (raw === null || raw === undefined || isNaN(raw)) raw = MAX_PAYBACK;
+
+                    return {
+                        label: (f.alias || f.name).replace(/^Payback[_ ]?/, "").replace(/_/g, " ").trim(),
+                        value: parseFloat(Number(raw).toFixed(2))
+                    };
+                });
+
+                const series = filteredData.map(d => d.value);
+                const labels = filteredData.map(d => d.label);
+                const maxValue = Math.max(...series).toFixed(2);
+
+                renderScenarioChart("radial", canvases.radial, {
+                    chart: { type: 'radialBar', height: 550 },
+                    series,
+                    labels,
+                    colors: ["#36a2eb", "#ff6384", "#ffcd56", "#4bc0c0", "#9966ff", "#ff9f40"],
+                    plotOptions: {
+                        radialBar: {
+                            hollow: { size: '35%' },
+                            dataLabels: {
+                                name: { show: true },
+                                value: { show: true, formatter: val => `${val} yıl` },
+                                total: { show: true, label: 'En Uzun', formatter: () => `${maxValue} yıl` }
                             }
-                        },
-                        tooltip: {
-                            theme: "dark",
-                            shared: false,
-                            followCursor: true,
-                            y: { formatter: val => `${val} yıl` }
-                        },
-                        legend: { show: true, position: 'bottom' },
-                        title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' }
-                    });
-                }
-            } catch (err) { logError("Radial Chart", err); }
+                        }
+                    },
+                    title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' }
+                });
+            } catch (err) { console.error("Radial Chart Hatası:", err); }
         }
+        //if (canvases.radial) {
+        //    try {
+        //        const fields = currentLayer.fields.filter(f => f.name.startsWith("Payback_"));
+        //        if (!fields.length) {
+        //            console.warn("Payback alanı bulunamadı.");
+        //        } else {
+        //            const stats = await fetchStats(fields, "max");
+        //            const MAX_PAYBACK = 25;
+
+        //            const filteredData = fields.map(f => {
+        //                let raw = stats[`${f.name}_max`];
+        //                if (raw === null || raw === undefined) raw = MAX_PAYBACK;
+        //                const value = (typeof raw === "number") ? parseFloat(raw.toFixed(2)) : MAX_PAYBACK;
+        //                return {
+        //                    label: (f.alias || f.name).replace(/^Payback[_ ]?/, "").replace(/_/g, " ").trim(),
+        //                    value
+        //                };
+        //            });
+
+        //            const series = filteredData.map(d => d.value);
+        //            const labels = filteredData.map(d => d.label);
+        //            const maxValue = Math.max(...series).toFixed(2);
+
+        //            renderScenarioChart("radial", canvases.radial, {
+        //                chart: { type: 'radialBar', height: 550 },
+        //                series,
+        //                labels,
+        //                colors: ["#36a2eb", "#ff6384", "#ffcd56", "#4bc0c0", "#9966ff", "#ff9f40", "#8a89a6"],
+        //                plotOptions: {
+        //                    radialBar: {
+        //                        hollow: { size: '35%' },
+        //                        track: { strokeWidth: '100%' },
+        //                        dataLabels: {
+        //                            name: { show: true, fontSize: '16px' },
+        //                            value: { show: true, formatter: val => `${val} yıl` },
+        //                            total: { show: true, label: 'Maks.', formatter: () => `${maxValue} yıl` }
+        //                        }
+        //                    }
+        //                },
+        //                tooltip: {
+        //                    theme: "dark",
+        //                    shared: false,
+        //                    followCursor: true,
+        //                    y: { formatter: val => `${val} yıl` }
+        //                },
+        //                legend: { show: true, position: 'bottom' },
+        //                title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' }
+        //            });
+        //        }
+        //    } catch (err) { logError("Radial Chart", err); }
+        //}
 
         // ---------- RADAR ----------
         if (canvases.radar) {
