@@ -1135,8 +1135,12 @@ async function drawScenarioCharts() {
         // ---------- ROI BOX PLOT ----------
         if (canvases.roiBox) {
             try {
-                // Sadece tam adı ROI_BASE_HP olanı dışarıda bırakır
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_") && f.name !== "ROI_BASE_HP____" && f.name !== "ROI_BASE_HP_PV____");
+                // Filtreleme: ROI_BASE_HP ve ROI_BASE_HP_PV alanlarını dahil etme
+                const fields = currentLayer.fields.filter(f =>
+                    f.name.startsWith("ROI_") //&&
+                    //f.name !== "ROI_BASE_HP____" &&
+                    //f.name !== "ROI_BASE_HP_PV____"
+                );
 
                 if (!fields.length) return;
 
@@ -1149,6 +1153,7 @@ async function drawScenarioCharts() {
                         .filter(v => v != null)
                         .map(v => parseFloat(String(v).replace(",", ".")))
                         .filter(v => !isNaN(v))
+                        .filter(v => v > -850)
                         .sort((a, b) => a - b);
 
                     if (!values.length) return null;
@@ -1166,17 +1171,35 @@ async function drawScenarioCharts() {
                 }).filter(Boolean);
 
                 renderScenarioChart("roiBox", canvases.roiBox, {
-                    chart: { type: 'boxPlot', height: 450, background: '#fff' },
+                    chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
                     series: [{ name: 'ROI', data: seriesData }],
                     colors: ["#4bc0c0"],
+                    title: {
+                        text: 'Return on Investment (ROI) Distribution',
+                        align: 'center',
+                        style: { fontSize: '16px', fontWeight: 'bold' }
+                    },
+                    xaxis: { title: { text: 'Scenarios' } },
+                    yaxis: {
+                        title: { text: 'ROI (%)' },
+                        labels: { formatter: val => val.toFixed(2) + "%" }
+                    },
                     tooltip: {
                         theme: "dark",
                         custom: ({ seriesIndex, dataPointIndex, w }) => {
-                            const y = w.config.series[seriesIndex].data[dataPointIndex].y;
-                            return `<div style="padding:8px">Min: ${y[0].toFixed(2)}%<br/>Max: ${y[4].toFixed(2)}%</div>`;
+                            const data = w.config.series[seriesIndex].data[dataPointIndex];
+                            const y = data.y;
+                            return `
+                        <div style="padding:10px;">
+                            <strong>${data.x}</strong><br/>
+                            Max: ${y[4].toFixed(2)}%<br/>
+                            Q3: ${y[3].toFixed(2)}%<br/>
+                            Medyan: ${y[2].toFixed(2)}%<br/>
+                            Q1: ${y[1].toFixed(2)}%<br/>
+                            Min: ${y[0].toFixed(2)}%
+                        </div>`;
                         }
-                    },
-                    yaxis: { labels: { formatter: val => val.toFixed(2) + "%" } }
+                    }
                 });
             } catch (err) { console.error(err); }
         }
@@ -1250,8 +1273,8 @@ async function drawScenarioCharts() {
         // ---------- NPV BOX PLOT ----------
         if (canvases.npvBox) {
             try {
-                // NPV_ ile başlayanları al, NPV_BASE_HP olanı dahil etme
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_") && f.name !== "NPV_BASE_HP____" && f.name !== "NPV_BASE_HP_PV____");
+                // NPV_ ile başlayanları al
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_"));
 
                 if (!fields.length) return;
 
@@ -1264,6 +1287,8 @@ async function drawScenarioCharts() {
                         .filter(v => v != null)
                         .map(v => parseFloat(String(v).replace(",", ".")))
                         .filter(v => !isNaN(v))
+                        // Filtreleme: -1000'den büyük olanları tut (daha küçük/negatif değerleri ele)
+                        .filter(v => v > -1000000)
                         .sort((a, b) => a - b);
 
                     if (!values.length) return null;
@@ -1284,25 +1309,32 @@ async function drawScenarioCharts() {
                     chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
                     series: [{ name: 'NPV', data: seriesData }],
                     colors: ["#4bc0c0"],
+                    title: {
+                        text: 'Net Present Value (NPV) Distribution',
+                        align: 'center',
+                        style: { fontSize: '16px', fontWeight: 'bold' }
+                    },
+                    xaxis: { title: { text: 'Scenarios' } },
+                    yaxis: {
+                        title: { text: 'NPV (€)' },
+                        labels: { formatter: val => "€" + val.toLocaleString() }
+                    },
                     tooltip: {
                         theme: "dark",
                         custom: function ({ seriesIndex, dataPointIndex, w }) {
                             const data = w.config.series[seriesIndex].data[dataPointIndex];
                             const y = data.y;
-                            return `<div style="padding:8px">
-                        <strong>${data.x}</strong><br/>
-                        Max: €${y[4].toLocaleString()}<br/>
-                        Medyan: €${y[2].toLocaleString()}<br/>
-                        Min: €${y[0].toLocaleString()}
-                    </div>`;
+                            return `
+                        <div style="padding:10px;">
+                            <strong>${data.x}</strong><br/>
+                            Max: €${y[4].toLocaleString()}<br/>
+                            Q3: €${y[3].toLocaleString()}<br/>
+                            Medyan: €${y[2].toLocaleString()}<br/>
+                            Q1: €${y[1].toLocaleString()}<br/>
+                            Min: €${y[0].toLocaleString()}
+                        </div>`;
                         }
-                    },
-                    yaxis: {
-                        title: { text: 'NPV (€)' },
-                        labels: { formatter: val => "€" + val.toLocaleString() }
-                    },
-                    xaxis: { title: { text: 'Scenarios' } },
-                    title: { text: 'Net Present Value (NPV) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
+                    }
                 });
             } catch (err) { console.error("NPV Box Error:", err); }
         }
