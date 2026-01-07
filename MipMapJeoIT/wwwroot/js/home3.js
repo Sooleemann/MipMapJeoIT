@@ -191,17 +191,21 @@ view.when(() => {
 sketch.on("create", (event) => {
     if (event.state === "complete") {
         sketchGeometry = event.graphic.geometry;
+
         highlightBuildings();
+
+        drawScenarioCharts();
     }
 });
 
-// Çizim güncellendiğinde
+// Çizim güncellendiğinde (vertex move vs.)
 sketch.on("update", (event) => {
     if (event.state === "complete" && event.graphics.length > 0) {
         sketchGeometry = event.graphics[0].geometry;
-        // highlightBuildings();
+        drawScenarioCharts();
     }
 });
+
 
 function highlightBuildings() {
     if (!currentLayer || !sketchGeometry) return;
@@ -230,15 +234,23 @@ function highlightBuildings() {
     });
 }
 
-// Çizim silindiğinde
-sketch.on("delete", () => {
+sketch.on("delete", async () => {
+
     sketchGeometry = null;
     selectedObjectIds = [];
+
     if (highlightHandle) {
         highlightHandle.remove();
         highlightHandle = null;
     }
-    currentLayer.definitionExpression = null; // tüm feature'ları göster
+
+    currentLayer.definitionExpression = null;
+
+    await currentLayer.refresh();
+
+    await new Promise(r => setTimeout(r, 0));
+
+    await drawScenarioCharts();
 });
 
 async function filterScene() {
@@ -983,35 +995,66 @@ async function drawScenarioCharts() {
 
         const fetchStats = async (fields = [], type = "avg") => {
             if (!fields.length) return {};
+
             const q = currentLayer.createQuery();
+
             q.outStatistics = fields.map(f => ({
                 onStatisticField: f.name,
                 outStatisticFieldName: `${f.name}_${type}`,
                 statisticType: type
             }));
+
             q.returnGeometry = false;
 
+            // 🔥 SKETCH FİLTRESİ (ZORLA RESET)
+            if (sketchGeometry) {
+                q.geometry = sketchGeometry;
+                q.spatialRelationship = "intersects";
+            } else {
+                q.geometry = null;
+                q.spatialRelationship = null;
+            }
+
+            // 🔥 WHERE FİLTRESİ
             if (currentLayer.definitionExpression) {
                 q.where = currentLayer.definitionExpression;
+            } else {
+                q.where = "1=1";
             }
 
             const res = await currentLayer.queryFeatures(q);
             return res.features?.[0]?.attributes ?? {};
         };
 
+
         const fetchValues = async (fields = []) => {
             if (!fields.length) return [];
+
             const q = currentLayer.createQuery();
+
             q.outFields = fields.map(f => f.name);
             q.returnGeometry = false;
 
+            // 🔥 SKETCH FİLTRESİ (ZORLA RESET)
+            if (sketchGeometry) {
+                q.geometry = sketchGeometry;
+                q.spatialRelationship = "intersects";
+            } else {
+                q.geometry = null;
+                q.spatialRelationship = null;
+            }
+
+            // 🔥 WHERE FİLTRESİ
             if (currentLayer.definitionExpression) {
                 q.where = currentLayer.definitionExpression;
+            } else {
+                q.where = "1=1";
             }
 
             const res = await currentLayer.queryFeatures(q);
             return res.features ?? [];
         };
+
 
         const formatKM = val => {
             if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + "B";
@@ -1092,140 +1135,244 @@ async function drawScenarioCharts() {
         // ---------- ROI BOX PLOT ----------
         if (canvases.roiBox) {
             try {
-                const MIN_LIMIT = -1000;
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_"));
-                if (!fields.length) {
-                    console.warn("ROI field bulunamadı.");
-                } else {
-                    const features = await fetchValues(fields);
-                    if (!features.length) {
-                        console.warn("ROI verisi bulunamadı.");
-                    } else {
-                        const seriesData = fields.map(f => {
-                            const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
-                            const values = rawVals
-                                .map(v => parseFloat(String(v).replace(",", ".")))
-                                .filter(v => !isNaN(v))
-                                .sort((a, b) => a - b);
+                // Sadece tam adı ROI_BASE_HP olanı dışarıda bırakır
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_") && f.name !== "ROI_BASE_HP____" && f.name !== "ROI_BASE_HP_PV____");
 
-                            if (!values.length) return null;
+                if (!fields.length) return;
 
-                            const realMin = values[0];
-                            const min = Math.max(realMin, MIN_LIMIT);
-                            const q1 = values[Math.floor(values.length * 0.25)];
-                            const median = values[Math.floor(values.length * 0.5)];
-                            const q3 = values[Math.floor(values.length * 0.75)];
-                            const max = values[values.length - 1];
+                const features = await fetchValues(fields);
+                if (!features.length) return;
 
-                            return {
-                                x: (f.alias || f.name).replace(/^ROI[_ ]?/, ""),
-                                y: [min, q1, median, q3, max],
-                                _realMin: realMin
-                            };
-                        }).filter(Boolean);
+                const seriesData = fields.map(f => {
+                    const values = features
+                        .map(feat => feat.attributes[f.name])
+                        .filter(v => v != null)
+                        .map(v => parseFloat(String(v).replace(",", ".")))
+                        .filter(v => !isNaN(v))
+                        .sort((a, b) => a - b);
 
-                        if (!seriesData.length) {
-                            console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
-                        } else {
-                            renderScenarioChart("roiBox", canvases.roiBox, {
-                                chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
-                                series: [{ name: 'ROI', data: seriesData }],
-                                colors: ["#4bc0c0"],
-                                tooltip: {
-                                    theme: "dark",
-                                    shared: true,
-                                    custom: function ({ seriesIndex, dataPointIndex, w }) {
-                                        const data = w.config.series[seriesIndex].data[dataPointIndex];
-                                        const y = data.y;
-                                        return `<div style="padding:6px">
-                                            <strong>${data.x}</strong><br/>
-                                            Max: ${y[4].toFixed(2)}%<br/>
-                                            Q3: ${y[3].toFixed(2)}%<br/>
-                                            Medyan: ${y[2].toFixed(2)}%<br/>
-                                            Q1: ${y[1].toFixed(2)}%<br/>
-                                            Min: ${data._realMin.toFixed(2)}%
-                                        </div>`;
-                                    }
-                                },
-                                yaxis: { title: { text: 'ROI (%)' }, labels: { formatter: val => val.toFixed(2) + "%" } },
-                                xaxis: { title: { text: 'Scenarios' } },
-                                title: { text: 'Return on Investment (ROI) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
-                            });
+                    if (!values.length) return null;
+
+                    return {
+                        x: (f.alias || f.name).replace(/^ROI[_ ]?/, ""),
+                        y: [
+                            values[0], // Min
+                            values[Math.floor(values.length * 0.25)], // Q1
+                            values[Math.floor(values.length * 0.5)],  // Median
+                            values[Math.floor(values.length * 0.75)], // Q3
+                            values[values.length - 1] // Max
+                        ]
+                    };
+                }).filter(Boolean);
+
+                renderScenarioChart("roiBox", canvases.roiBox, {
+                    chart: { type: 'boxPlot', height: 450, background: '#fff' },
+                    series: [{ name: 'ROI', data: seriesData }],
+                    colors: ["#4bc0c0"],
+                    tooltip: {
+                        theme: "dark",
+                        custom: ({ seriesIndex, dataPointIndex, w }) => {
+                            const y = w.config.series[seriesIndex].data[dataPointIndex].y;
+                            return `<div style="padding:8px">Min: ${y[0].toFixed(2)}%<br/>Max: ${y[4].toFixed(2)}%</div>`;
                         }
-                    }
-                }
-            } catch (err) { logError("ROI Box", err); }
+                    },
+                    yaxis: { labels: { formatter: val => val.toFixed(2) + "%" } }
+                });
+            } catch (err) { console.error(err); }
         }
+        //if (canvases.roiBox) {
+        //    try {
+        //        const MIN_LIMIT = -1000;
+        //        const fields = currentLayer.fields.filter(f => f.name.startsWith("ROI_"));
+        //        if (!fields.length) {
+        //            console.warn("ROI field bulunamadı.");
+        //        } else {
+        //            const features = await fetchValues(fields);
+        //            if (!features.length) {
+        //                console.warn("ROI verisi bulunamadı.");
+        //            } else {
+        //                const seriesData = fields.map(f => {
+        //                    const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
+        //                    const values = rawVals
+        //                        .map(v => parseFloat(String(v).replace(",", ".")))
+        //                        .filter(v => !isNaN(v))
+        //                        .sort((a, b) => a - b);
+
+        //                    if (!values.length) return null;
+
+        //                    const realMin = values[0];
+        //                    const min = Math.max(realMin, MIN_LIMIT);
+        //                    const q1 = values[Math.floor(values.length * 0.25)];
+        //                    const median = values[Math.floor(values.length * 0.5)];
+        //                    const q3 = values[Math.floor(values.length * 0.75)];
+        //                    const max = values[values.length - 1];
+
+        //                    return {
+        //                        x: (f.alias || f.name).replace(/^ROI[_ ]?/, ""),
+        //                        y: [min, q1, median, q3, max],
+        //                        _realMin: realMin
+        //                    };
+        //                }).filter(Boolean);
+
+        //                if (!seriesData.length) {
+        //                    console.warn("Boxplot için geçerli ROI verisi bulunamadı.");
+        //                } else {
+        //                    renderScenarioChart("roiBox", canvases.roiBox, {
+        //                        chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
+        //                        series: [{ name: 'ROI', data: seriesData }],
+        //                        colors: ["#4bc0c0"],
+        //                        tooltip: {
+        //                            theme: "dark",
+        //                            shared: true,
+        //                            custom: function ({ seriesIndex, dataPointIndex, w }) {
+        //                                const data = w.config.series[seriesIndex].data[dataPointIndex];
+        //                                const y = data.y;
+        //                                return `<div style="padding:6px">
+        //                                    <strong>${data.x}</strong><br/>
+        //                                    Max: ${y[4].toFixed(2)}%<br/>
+        //                                    Q3: ${y[3].toFixed(2)}%<br/>
+        //                                    Medyan: ${y[2].toFixed(2)}%<br/>
+        //                                    Q1: ${y[1].toFixed(2)}%<br/>
+        //                                    Min: ${data._realMin.toFixed(2)}%
+        //                                </div>`;
+        //                            }
+        //                        },
+        //                        yaxis: { title: { text: 'ROI (%)' }, labels: { formatter: val => val.toFixed(2) + "%" } },
+        //                        xaxis: { title: { text: 'Scenarios' } },
+        //                        title: { text: 'Return on Investment (ROI) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
+        //                    });
+        //                }
+        //            }
+        //        }
+        //    } catch (err) { logError("ROI Box", err); }
+        //}
 
         // ---------- NPV BOX PLOT ----------
         if (canvases.npvBox) {
             try {
-                const MIN_LIMIT = -1_000_000;
-                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_"));
-                if (!fields.length) {
-                    console.warn("NPV field bulunamadı.");
-                } else {
-                    const features = await fetchValues(fields);
-                    if (!features.length) {
-                        console.warn("NPV verisi bulunamadı.");
-                    } else {
-                        const seriesData = fields.map(f => {
-                            const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
-                            const values = rawVals
-                                .map(v => parseFloat(String(v).replace(",", ".")))
-                                .filter(v => !isNaN(v))
-                                .sort((a, b) => a - b);
+                // NPV_ ile başlayanları al, NPV_BASE_HP olanı dahil etme
+                const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_") && f.name !== "NPV_BASE_HP____" && f.name !== "NPV_BASE_HP_PV____");
 
-                            if (!values.length) return null;
+                if (!fields.length) return;
 
-                            const realMin = values[0];
-                            const min = Math.max(realMin, MIN_LIMIT);
-                            const q1 = values[Math.floor(values.length * 0.25)];
-                            const median = values[Math.floor(values.length * 0.5)];
-                            const q3 = values[Math.floor(values.length * 0.75)];
-                            const max = values[values.length - 1];
+                const features = await fetchValues(fields);
+                if (!features.length) return;
 
-                            return {
-                                x: (f.alias || f.name).replace(/^NPV[_ ]?/, ""),
-                                y: [min, q1, median, q3, max],
-                                _realMin: realMin
-                            };
-                        }).filter(Boolean);
+                const seriesData = fields.map(f => {
+                    const values = features
+                        .map(feat => feat.attributes[f.name])
+                        .filter(v => v != null)
+                        .map(v => parseFloat(String(v).replace(",", ".")))
+                        .filter(v => !isNaN(v))
+                        .sort((a, b) => a - b);
 
-                        if (!seriesData.length) {
-                            console.warn("Boxplot için geçerli NPV verisi bulunamadı.");
-                        } else {
-                            renderScenarioChart("npvBox", canvases.npvBox, {
-                                chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
-                                series: [{ name: 'NPV', data: seriesData }],
-                                colors: ["#4bc0c0"],
-                                tooltip: {
-                                    theme: "dark",
-                                    shared: true,
-                                    custom: function ({ seriesIndex, dataPointIndex, w }) {
-                                        const data = w.config.series[seriesIndex].data[dataPointIndex];
-                                        const y = data.y;
-                                        return `<div style="padding:6px">
-                                            <strong>${data.x}</strong><br/>
-                                            Min (Clamp): €${y[0].toFixed(2)}<br/>
-                                            Gerçek Min: €${data._realMin.toFixed(2)}<br/>
-                                            Q1: €${y[1].toFixed(2)}<br/>
-                                            Medyan: €${y[2].toFixed(2)}<br/>
-                                            Q3: €${y[3].toFixed(2)}<br/>
-                                            Max: €${y[4].toFixed(2)}
-                                        </div>`;
-                                    }
-                                },
-                                yaxis: { title: { text: 'NPV (€)' }, labels: { formatter: val => "€" + val.toFixed(2) } },
-                                xaxis: { title: { text: 'Scenarios' } },
-                                title: { text: 'Net Present Value (NPV) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
-                            });
+                    if (!values.length) return null;
+
+                    return {
+                        x: (f.alias || f.name).replace(/^NPV[_ ]?/, ""),
+                        y: [
+                            values[0],                                  // Min
+                            values[Math.floor(values.length * 0.25)],   // Q1
+                            values[Math.floor(values.length * 0.5)],    // Medyan
+                            values[Math.floor(values.length * 0.75)],   // Q3
+                            values[values.length - 1]                   // Max
+                        ]
+                    };
+                }).filter(Boolean);
+
+                renderScenarioChart("npvBox", canvases.npvBox, {
+                    chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
+                    series: [{ name: 'NPV', data: seriesData }],
+                    colors: ["#4bc0c0"],
+                    tooltip: {
+                        theme: "dark",
+                        custom: function ({ seriesIndex, dataPointIndex, w }) {
+                            const data = w.config.series[seriesIndex].data[dataPointIndex];
+                            const y = data.y;
+                            return `<div style="padding:8px">
+                        <strong>${data.x}</strong><br/>
+                        Max: €${y[4].toLocaleString()}<br/>
+                        Medyan: €${y[2].toLocaleString()}<br/>
+                        Min: €${y[0].toLocaleString()}
+                    </div>`;
                         }
-                    }
-                }
-            } catch (err) { logError("NPV Box", err); }
+                    },
+                    yaxis: {
+                        title: { text: 'NPV (€)' },
+                        labels: { formatter: val => "€" + val.toLocaleString() }
+                    },
+                    xaxis: { title: { text: 'Scenarios' } },
+                    title: { text: 'Net Present Value (NPV) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
+                });
+            } catch (err) { console.error("NPV Box Error:", err); }
         }
+        //if (canvases.npvBox) {
+        //    try {
+        //        const MIN_LIMIT = -1_000_000;
+        //        const fields = currentLayer.fields.filter(f => f.name.startsWith("NPV_"));
+        //        if (!fields.length) {
+        //            console.warn("NPV field bulunamadı.");
+        //        } else {
+        //            const features = await fetchValues(fields);
+        //            if (!features.length) {
+        //                console.warn("NPV verisi bulunamadı.");
+        //            } else {
+        //                const seriesData = fields.map(f => {
+        //                    const rawVals = features.map(feat => feat.attributes[f.name]).filter(v => v != null);
+        //                    const values = rawVals
+        //                        .map(v => parseFloat(String(v).replace(",", ".")))
+        //                        .filter(v => !isNaN(v))
+        //                        .sort((a, b) => a - b);
 
+        //                    if (!values.length) return null;
+
+        //                    const realMin = values[0];
+        //                    const min = Math.max(realMin, MIN_LIMIT);
+        //                    const q1 = values[Math.floor(values.length * 0.25)];
+        //                    const median = values[Math.floor(values.length * 0.5)];
+        //                    const q3 = values[Math.floor(values.length * 0.75)];
+        //                    const max = values[values.length - 1];
+
+        //                    return {
+        //                        x: (f.alias || f.name).replace(/^NPV[_ ]?/, ""),
+        //                        y: [min, q1, median, q3, max],
+        //                        _realMin: realMin
+        //                    };
+        //                }).filter(Boolean);
+
+        //                if (!seriesData.length) {
+        //                    console.warn("Boxplot için geçerli NPV verisi bulunamadı.");
+        //                } else {
+        //                    renderScenarioChart("npvBox", canvases.npvBox, {
+        //                        chart: { type: 'boxPlot', height: 450, background: '#fff', toolbar: { show: true } },
+        //                        series: [{ name: 'NPV', data: seriesData }],
+        //                        colors: ["#4bc0c0"],
+        //                        tooltip: {
+        //                            theme: "dark",
+        //                            shared: true,
+        //                            custom: function ({ seriesIndex, dataPointIndex, w }) {
+        //                                const data = w.config.series[seriesIndex].data[dataPointIndex];
+        //                                const y = data.y;
+        //                                return `<div style="padding:6px">
+        //                                    <strong>${data.x}</strong><br/>
+        //                                    Min (Clamp): €${y[0].toFixed(2)}<br/>
+        //                                    Gerçek Min: €${data._realMin.toFixed(2)}<br/>
+        //                                    Q1: €${y[1].toFixed(2)}<br/>
+        //                                    Medyan: €${y[2].toFixed(2)}<br/>
+        //                                    Q3: €${y[3].toFixed(2)}<br/>
+        //                                    Max: €${y[4].toFixed(2)}
+        //                                </div>`;
+        //                            }
+        //                        },
+        //                        yaxis: { title: { text: 'NPV (€)' }, labels: { formatter: val => "€" + val.toFixed(2) } },
+        //                        xaxis: { title: { text: 'Scenarios' } },
+        //                        title: { text: 'Net Present Value (NPV) Distribution', align: 'center', style: { fontSize: '16px', fontWeight: 'bold' } }
+        //                    });
+        //                }
+        //            }
+        //        }
+        //    } catch (err) { logError("NPV Box", err); }
+        //}
         // ---------- kWh/m2 Qheating ----------
         if (canvases.kwhBox) {
             try {
@@ -1363,25 +1510,31 @@ async function drawScenarioCharts() {
 
                 const MAX_PAYBACK = 25;
 
-                // SORUN ÇÖZÜMÜ: Her field için ayrı istatistik çekiyoruz (Promise.all)
-                const statsArray = await Promise.all(fields.map(f => fetchStats([f], "max")));
+                const features = await fetchValues(fields);
 
-                const filteredData = fields.map((f, index) => {
-                    const s = statsArray[index];
-                    // Farklı isimlendirme olasılıklarını kontrol et
-                    let raw = s[`${f.name}_max`] ?? s[`max_${f.name}`] ?? s[f.name] ?? Object.values(s)[0];
+                const filteredData = fields.map(f => {
+                    // Sadece numeric tipte olan değerleri al
+                    const numericValues = features
+                        .map(feat => feat.attributes[f.name])
+                        .filter(v => typeof v === "number" && !isNaN(v));
 
-                    if (raw === null || raw === undefined || isNaN(raw)) raw = MAX_PAYBACK;
+                    // ArcGIS mantığı: geçerli numeric değerler üzerinden ortalama
+                    const avgValue = numericValues.length > 0
+                        ? numericValues.reduce((a, b) => a + b, 0) / numericValues.length
+                        : MAX_PAYBACK;
 
                     return {
                         label: (f.alias || f.name).replace(/^Payback[_ ]?/, "").replace(/_/g, " ").trim(),
-                        value: parseFloat(Number(raw).toFixed(2))
+                        value: parseFloat(avgValue.toFixed(2)),
+                        validCount: numericValues.length // debug için
                     };
                 });
 
                 const series = filteredData.map(d => d.value);
                 const labels = filteredData.map(d => d.label);
-                const maxValue = Math.max(...series).toFixed(2);
+
+                // Grafik merkezindeki genel ortalama
+                const totalAvg = (series.reduce((a, b) => a + b, 0) / series.length).toFixed(2);
 
                 renderScenarioChart("radial", canvases.radial, {
                     chart: { type: 'radialBar', height: 550 },
@@ -1394,14 +1547,22 @@ async function drawScenarioCharts() {
                             dataLabels: {
                                 name: { show: true },
                                 value: { show: true, formatter: val => `${val} yıl` },
-                                total: { show: true, label: 'En Uzun', formatter: () => `${maxValue} yıl` }
+                                total: {
+                                    show: true,
+                                    label: 'Genel Ort.',
+                                    formatter: () => `${totalAvg} yıl`
+                                }
                             }
                         }
                     },
-                    title: { text: 'Senaryolara Göre Maks. Geri Ödeme Süresi' }
+                    title: { text: 'Ortalama Geri Ödeme Süresi', align: 'center' }
                 });
-            } catch (err) { console.error("Radial Chart Hatası:", err); }
+
+            } catch (err) {
+                console.error("Radial Chart Hatası:", err);
+            }
         }
+
         //if (canvases.radial) {
         //    try {
         //        const fields = currentLayer.fields.filter(f => f.name.startsWith("Payback_"));
@@ -1515,6 +1676,6 @@ async function drawScenarioCharts() {
 
 document.getElementById("btnInfo").addEventListener("click", function () {
     // PDF dosya yolunu buraya koy
-    const pdfUrl = "/pdf.pdf";
+    const pdfUrl = "/method.pdf";
     window.open(pdfUrl, "_blank");
 });
