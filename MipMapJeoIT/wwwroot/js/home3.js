@@ -1675,5 +1675,6 @@ async function drawScenarioCharts() {
 }
 
 document.getElementById("btnInfo").addEventListener("click", function () {
-    window.open("method.pdf", "_blank");
+    const pdfUrl = "retrofit/method.pdf";
+    window.open(pdfUrl, "_blank");
 });
