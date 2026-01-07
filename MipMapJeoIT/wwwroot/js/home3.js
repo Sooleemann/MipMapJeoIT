@@ -1675,7 +1675,5 @@ async function drawScenarioCharts() {
 }
 
 document.getElementById("btnInfo").addEventListener("click", function () {
-    // PDF dosya yolunu buraya koy
-    const pdfUrl = "/method.pdf";
-    window.open(pdfUrl, "_blank");
+    window.open("method.pdf", "_blank");
 });
